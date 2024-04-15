@@ -1,40 +1,38 @@
 import asyncio
 
-from signal_processing import SignalProcessing
+from signal_processing import (
+    SignalProcessing,
+)  # Ensure SignalProcessing class is adapted for async queue use
+from simulate_data import (
+    SimulateData,
+)  # Ensure SimulateData class is adapted for continuous data generation
+
 
 class NanoVNA:
-    def __init__(self, batch_size=3, simulate=True, verbose=False):
-        self.batch_size = batch_size
+    def __init__(self, simulate=True, verbose=False):
         self.simulate = simulate
-        self.signal_processing = SignalProcessing()
         self.verbose = verbose
-        if self.simulate:
-            from simulate_data import SimulateData
-            self.data_source = SimulateData(batch_size=batch_size)
-        else: 
-            # Using real data. Import functionality from nanovna-saver-headless repo.
-            pass
+        self.data_queue = asyncio.Queue()  # Queue for inter-class communication
+        self.data_source = SimulateData(
+            self.data_queue, verbose=self.verbose
+        )  # SimulateData now handles continuous data generation
+        self.signal_processing = SignalProcessing(
+            self.data_queue, verbose=self.verbose
+        )  # Pass queue to SignalProcessing
         self.running = True
 
-    async def process_data(self):
+    async def run(self):
+        start_data = asyncio.create_task(self.data_source.generate_start_data())  # Reads a few data points before the processing starts, to avoid empty queue
+        producer = asyncio.create_task(self.data_source.generate_data_continuously())
+        consumer = asyncio.create_task(
+            self.signal_processing.process_data_continuously()
+        )
         try:
-            while self.running:
-                if self.simulate:
-                    s11_batch, s21_batch = await self.data_source.generate_batch()
-                    result1 = self.signal_processing.process_gas_phase(s21_batch)
-                    result2 = self.signal_processing.process_direction(s11_batch, s21_batch)
-                    if self.verbose:
-                        print(f"Result 1: {result1}")
-                        print(f"Result 2: {result2}")
-
-                    await asyncio.sleep(1)  # Adapt this.
-                else:
-                    # Using the real data from the nanoVNA. 
-                    pass
-        except KeyboardInterrupt:
-            print("Keyboard interrupt received. Stopping rading and processing of data.")
-            self.stop()
+            await asyncio.gather(start_data)
+            await asyncio.gather(start_data, producer, consumer)
+        except asyncio.CancelledError:
+            pass  # Handle cleanup if necessary
 
     def stop(self):
-        # Stops the continuous reding and processing of data. 
+        # Stops the continuous reading and processing of data
         self.running = False
