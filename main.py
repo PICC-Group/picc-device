@@ -1,10 +1,10 @@
 import asyncio
-from nano_vna import NanoVNA
+from async_data_processor import AsyncDataProcessor
 
 
 async def main():
-    nanoVNA = NanoVNA(simulate=True, verbose=True)
-    await nanoVNA.run()  # Changed to use the new run method that handles both production and consumption
+    nanoVNA = AsyncDataProcessor(simulate=True, verbose=True)
+    await nanoVNA.run()  # Runs both streaming and continuous processing of data. 
 
 
 if __name__ == "__main__":
