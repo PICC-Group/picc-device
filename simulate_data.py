@@ -3,8 +3,9 @@ import random
 
 
 class SimulateData:
-    def __init__(self, data_queue, verbose):
+    def __init__(self, data_queue, sleep_time=0.1, verbose=False):
         self.data_queue = data_queue
+        self.sleep_time = sleep_time
         self.verbose = verbose
 
     async def generate_start_data(self):
@@ -21,7 +22,7 @@ class SimulateData:
             if self.verbose:
                 print(f"Generated data: S11={s11_data}, S21={s21_data}")
                 print(f"Queue length: {self.data_queue.qsize()}")
-            await asyncio.sleep(2)  # Added sleep to simulate time delay
+            await asyncio.sleep(self.sleep_time)  # Added sleep to simulate time delay
 
     def generate_complex_data(self):
         real_part = random.uniform(-1, 1)

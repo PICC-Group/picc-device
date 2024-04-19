@@ -17,18 +17,20 @@ CALIBRATION_FILE = (
 
 
 class AsyncDataProcessor:
-    def __init__(self, datafile=False, verbose=False):
+    def __init__(self, datafile=False, sleep_time=0.1, verbose=False):
         self.simulate = not datafile  # True if we are simulating data, false if we are streaming from the nanoVNA
+        self.sleep_time = sleep_time
         self.verbose = verbose
+        self.datafile = datafile
         self.data_queue = asyncio.Queue()  # Queue for inter-class communication
         if self.simulate:  # Runs on simulated data.
-            self.data_source = SimulateData(self.data_queue, verbose=self.verbose)
+            self.data_source = SimulateData(data_queue=self.data_queue, sleep_time=self.sleep_time, verbose=self.verbose)
         else:  # Runs on streamed data from the vna.
             # TODO: Put nanoVNA data into a async Queue that is refered to as self.data_source. 
-            self.data_source = NanoVNAData(self.data_queue, self.verbose)
+            self.data_source = NanoVNAData(data_queue=self.data_queue, sleep_time=self.sleep_time, verbose=self.verbose)
 
         self.signal_processing = SignalProcessing(
-            self.data_queue, verbose=self.verbose
+            data_queue=self.data_queue, sleep_time=self.sleep_time, verbose=self.verbose
         )  # Pass queue to SignalProcessing
         self.running = True
 
