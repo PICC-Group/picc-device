@@ -12,7 +12,7 @@ from nanovna_data import (
 
 # File used for calibratin the vna. 
 CALIBRATION_FILE = (
-    "./test_cali.s2p"  # "Calibration_file_2024-04-12 12:23:02.604314.s2p"
+    "../oscars_cal.cal" #"./test_cali.s2p"  # "Calibration_file_2024-04-12 12:23:02.604314.s2p"
 )
 
 
