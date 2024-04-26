@@ -1,5 +1,5 @@
 import asyncio
-from nanovna_saver_headless.src.NanoVNASaverHeadless import NanoVNASaverHeadless
+import pynanovna
 
 
 class NanoVNAData:
@@ -7,7 +7,7 @@ class NanoVNAData:
         self.data_queue = data_queue
         self.producer_sleep_time = producer_sleep_time
         self.verbose = verbose
-        self.vna = NanoVNASaverHeadless(0, self.verbose)
+        self.vna = pynanovna.NanoVNAWorker(0, self.verbose)
 
     async def generate_data_continuously(self, datafile=False):  
         if self.vna.playback_mode and not datafile:  # No VNA is connected and no play back file is given. 
