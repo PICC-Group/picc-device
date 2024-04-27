@@ -1,5 +1,5 @@
 import asyncio
-import pynanovna
+from pynanovna import pynanovna
 
 
 class NanoVNAData:

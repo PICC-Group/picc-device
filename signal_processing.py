@@ -13,9 +13,10 @@ UPPER_VAL_LIM = 2.0  # Needs to be calibrated
 
 
 class SignalProcessing:
-    def __init__(self, data_queue, process_sleep_time=0.0001, verbose=False):
+    def __init__(self, data_queue, process_sleep_time=0.0001, smoothing_points: int=5,  verbose=False):
         self.data_queue = data_queue  # The queue from which to consume data
         self.process_sleep_time = process_sleep_time
+        self.smoothing_points = smoothing_points
         self.norm = []
         self.verbose = verbose
 
@@ -36,6 +37,94 @@ class SignalProcessing:
                 print(f"Processed phase: {phase}, direction: {direction}")
             self.data_queue.task_done()
             await asyncio.sleep(self.process_sleep_time)
+
+    async def _mean_smoothing(self):
+        """Calculates the mean value of n number of S11 and S21 values. 
+        No value is removed. 
+
+        Returns:
+            list[complex]: mean S11 and S21 values
+        """
+        n = self.smoothing_points
+        temp_storage = []
+        try:
+            # Check if the queue has enough items
+            if self.queue.qsize() < n:
+                print("Not enough items in the queue to calculate the mean.")
+                return None, None
+
+            # Temporarily remove n items to peek
+            for _ in range(n):
+                item = await self.queue.get()
+                temp_storage.append(item)
+            
+            # Calculate mean for S11 and S21
+            s11_values = [item[0] for item in temp_storage]
+            s21_values = [item[1] for item in temp_storage]
+            mean_s11 = np.mean(s11_values)
+            mean_s21 = np.mean(s21_values)
+            
+            # Put the items back in the queue
+            for item in reversed(temp_storage):
+                self.queue._queue.appendleft(item)  # Directly manipulating the internal deque
+            
+            return [mean_s11, mean_s21]
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            # In case of an error, ensure all items are put back
+            while temp_storage:
+                item = temp_storage.pop()
+                await self.queue.put(item)
+            return None, None
+        
+    async def _weighted_mean_smoothing(self, n):
+        """Calculates the mean value of n number of S11 and S21 values. 
+        No value is removed. 
+
+        Returns:
+            list[complex]: mean S11 and S21 values
+        """
+        temp_storage = []
+        n = self.smoothing_points
+        try:
+            # Check if the queue has enough items
+            if self.queue.qsize() < n:
+                print("Not enough items in the queue to calculate the mean.")
+                return None, None
+
+            # Temporarily remove n items to peek
+            for _ in range(n):
+                item = await self.queue.get()
+                temp_storage.append(item)
+            
+            # Calculate weights based on n. w1 = 1, w_(n+1) = 0
+            weights = [1 - (0.5 / (n - 1)) * i if n > 1 else 1 for i in range(n)]
+
+            # Calculate mean for S11 and S21
+            s11_values = [item[0] * weight for item, weight in zip(temp_storage, weights)]
+            s21_values = [item[1] * weight for item, weight in zip(temp_storage, weights)]
+            total_weight = sum(weights)
+            mean_s11 = sum(s11_values) / total_weight
+            mean_s21 = sum(s21_values) / total_weight
+            
+            # Puts all items back into their original order in the queue. 
+            for item in reversed(temp_storage):
+                self.queue._queue.appendleft(item)
+            
+            # Reomoves the firs item.
+            #for item in reversed(temp_storage[1:]):  # Skip the first item
+             #    self.queue._queue.appendleft(item)
+            
+            return [mean_s11, mean_s21]
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            # In case of an error, ensure all items are put back
+            while temp_storage:
+                item = temp_storage.pop()
+                await self.queue.put(item)
+            return None, None
 
     def set_norm(self, s11, s12):
         self.norm = [s11, s12]
