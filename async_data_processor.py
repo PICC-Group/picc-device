@@ -17,12 +17,12 @@ CALIBRATION_FILE = (
 
 
 class AsyncDataProcessor:
-    def __init__(self, simulate: bool=False, datafile: str=None, producer_sleep_time: float=0.1, process_sleep_time: float= 0.0001, verbose: bool=False):
+    def __init__(self, simulate: bool=False, datafile: str=False, producer_sleep_time: float=0.1, process_sleep_time: float= 0.0001, verbose: bool=False):
         """Initialize a AsyncDataProcessor object.
 
         Args:
             simulate (bool): Uses and instance of the SimulateData class for simulated data as data source if true, otherwise uses an istance of the NanoVNAData class for streaming or playback of data. 
-            datafile (str): File for playback mode when simulate is false. If simulate is false and datafile none, then streaming from nanoVNA is used.
+            datafile (str): File for playback mode when simulate is false. If simulate is false and datafile false, then streaming from nanoVNA is used.
             producer_sleep_time (float): Sleep time after generating/producing data function is called.
             process_sleep_time (foat): Sleep time after processing data function is called. 
             verbose (bool): Prints information if true. 

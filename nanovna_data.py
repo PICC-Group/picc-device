@@ -1,5 +1,5 @@
 import asyncio
-from pynanovna import pynanovna
+import pynanovna
 
 
 class NanoVNAData:
@@ -7,7 +7,7 @@ class NanoVNAData:
         self.data_queue = data_queue
         self.producer_sleep_time = producer_sleep_time
         self.verbose = verbose
-        self.vna = pynanovna.NanoVNAWorker(0, self.verbose)
+        self.vna = pynanovna.NanoVNAWorker(verbose=self.verbose)
 
     async def generate_data_continuously(self, datafile=False):  
         if self.vna.playback_mode and not datafile:  # No VNA is connected and no play back file is given. 
@@ -16,12 +16,10 @@ class NanoVNAData:
         # Uses the playback file 'datafile'. 
         data = self.vna.stream_data(data_file=datafile)
         for sweep in data:
-            s11_re, s11_im, s21_re, s21_im, freq = sweep
-            s11_data = [complex(s11_re[i], s11_im[i]) for i in range(len(s11_re))]
-            s21_data = [complex(s21_re[j], s21_im[j]) for j in range(len(s21_re))]
-            await self.data_queue.put((s11_data, s21_data))
+            complex_points = ([p.z for p in sweep[0]], [p.z for p in sweep[1]])
+            await self.data_queue.put(complex_points)
             if self.verbose:
-                print(f"Generated data: S11={s11_data}, S21={s21_data}")
+                print(f"Generated data: S11={complex_points[0]}, S21={complex_points[1]}")
                 print(f"Queue length: {self.data_queue.qsize()}")
             await asyncio.sleep(self.producer_sleep_time)  # Added sleep to simulate time delay
 
