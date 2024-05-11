@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #333; color: white; text-align: center; }
+        .container { padding: 20px; }
+        .data-box { margin: 10px auto; padding: 10px; background: #444; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Real-time Control Values</h1>
+        <div class="data-box">
+            <h2>Angle</h2>
+            <p id="angle">0</p>
+        </div>
+        <div class="data-box">
+            <h2>Throttle</h2>
+            <p id="throttle">0</p>
+        </div>
+    </div>
+    
+    <script>
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('angle').innerText = data.angle;
+                    document.getElementById('throttle').innerText = data.throttle;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Update data every 500ms
+        setInterval(fetchData, 500);
+    </script>
+</body>
+</html>
