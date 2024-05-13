@@ -13,7 +13,7 @@ CALIBRATION_FILE = (
 
 
 class AsyncDataProcessor:
-    def __init__(self, datafile: str=False, producer_sleep_time: float=0.1, process_sleep_time: float= 0.0001, verbose: bool=False):
+    def __init__(self, datafile: str=False, calibration_file: str=False, producer_sleep_time: float=0.1, process_sleep_time: float= 0.0001, verbose: bool=False):
         """Initialize a AsyncDataProcessor object.
 
         Args:
@@ -29,7 +29,7 @@ class AsyncDataProcessor:
         self.datafile = datafile
 
         self.data_source = pynanovna.NanoVNAWorker(verbose=verbose)
-        #self.data_source.calibrate()  This needs to be done through a terminal atm.
+        self.data_source.calibrate(calibration_file) #  This needs to be done through a terminal atm.
         self.data_source.set_sweep(2.9e9, 3.1e9, 1, 101)
         self.data_stream = self.data_source.stream_data(datafile)
 
