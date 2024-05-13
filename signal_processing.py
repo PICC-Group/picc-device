@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import asyncio
+from scipy.special import comb
 
 # S11 phase throttle parameters
 UPPER_PHASE_LIM = 0.8 * math.pi
@@ -20,25 +21,51 @@ class SignalProcessing:
 
     async def process_data_continuously(self):
         for s11, s21 in self.data_stream:
-            phase = self.calculate_angle(s11, s21)
-            direction = self.calculate_throttle(s11, s21)
+            phase = self.get_angle(s11, s21)
+            direction = self.get_throttle(s11, s21)
             if self.verbose:
                 print(f"Processed phase: {phase}, direction: {direction}")
             await asyncio.sleep(self.process_sleep_time)
 
-    @staticmethod
-    def calculate_angle(s11_data, s21_data, norm):
-        # OSCARS MAGIC
-        pass
+    def get_angle(self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0):
+        ## Calculate angle from s11 and s21 data, ref_angle_data and ref_throttle_data is returned from setup
+        ns11, ns21 = self._normalize(s11, s21)
+        ang = (np.average(np.abs(ns21)))/np.power((np.average(np.abs(ns11))),0.5)
 
-    @staticmethod
-    def calculate_throttle(s11_data, s21_data):
-        # OSCARS MAGIC
-        pass
+        if ref_angle_data is not None and ref_throttle_data is not None:
+            h = self.get_throttle(s11,s21, ref_throttle_data, alpha)
+            minval = h*ref_angle_data[0]+(1-h)*ref_angle_data[2] # value at minangle interpolated between min distance and max distance based on current throttle
+            maxval = h*ref_angle_data[1]+(1-h)*ref_angle_data[3] # value at maxangle interpolated between min distance and max distance based on current throttle
+            return self.smoothstep(ang,minval,maxval, 0) # Clamp the value between minval and maxval using a smoothstep function https://en.wikipedia.org/wiki/Smoothstep
+        return ang
 
-    def _fourier_filtering(self, s11, s21):
+    def get_throttle(self, s11, s21, ref_throttle_data=None, alpha=3.0):
+        ## Calculate throttle value from s11 and s21 data, ref_throttle_data is returned from setup
+        ns11, ns21 = self._normalize(s11, s21)
+        h = np.square(np.average(np.abs(ns11))) + np.square(alpha*np.average(np.abs(ns21)))
+        if ref_throttle_data is None:
+            return np.sqrt(h)
+        else:
+            return self.smoothstep(np.sqrt(h),ref_throttle_data[1],ref_throttle_data[0],0) # Clamp value between minimum throttle and maximum throttle (N=0 in smoothstep corresponds to normal clamp)
+
+    def fourier_filtering(self, s11, s21):
         # TEOS MAGIC
         pass
+    
+    def _normalize(self, s11, s21, norm) -> tuple:
+        return (s11 - norm[0], s21 - norm[1])
+    
+    def smoothstep(self, x, x_min=0, x_max=1, N=1):
+        ## Smoothstep function https://en.wikipedia.org/wiki/Smoothstep, used for limiting data between a maximum and minimum in a 'smooth' way.
+        x = np.clip((x - x_min) / (x_max - x_min), 0, 1)
+
+        result = 0
+        for n in range(0, N + 1):
+            result += comb(N + n, n) * comb(2 * N + 1, N - n) * (-x) ** n
+
+        result *= x ** (N + 1)
+
+        return result
 
     async def _mean_smoothing(self):
         ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################
