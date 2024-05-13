@@ -20,7 +20,7 @@ class SignalProcessing:
         smoothing_points: int = 5,
         verbose=False,
     ):
-        self.data_stream = data_stream  # The stream from which to process data
+        self.stream = data_stream  # The stream from which to process data
         self.process_sleep_time = process_sleep_time
         self.smoothing_points = smoothing_points
         self.verbose = verbose
@@ -31,7 +31,7 @@ class SignalProcessing:
         self.setup()
 
     async def process_data_continuously(self):
-        for s11, s21 in self.data_stream:
+        for s11, s21 in self.stream:
             phase = self.get_angle(s11, s21)
             direction = self.get_throttle(s11, s21)
             if self.verbose:
@@ -42,6 +42,8 @@ class SignalProcessing:
         self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0
     ):
         ## Calculate angle from s11 and s21 data, ref_angle_data and ref_throttle_data is returned from setup
+        if type(s11[0]) != np.complex128:
+            s11, s21 = self.data_to_np([s11, s21])
         ns11, ns21 = self._normalize(s11, s21)
         ang = (np.average(np.abs(ns21))) / np.power((np.average(np.abs(ns11))), 0.5)
 
@@ -60,6 +62,8 @@ class SignalProcessing:
 
     def get_throttle(self, s11, s21, ref_throttle_data=None, alpha=3.0):
         ## Calculate throttle value from s11 and s21 data, ref_throttle_data is returned from setup
+        if type(s11[0]) != np.complex128:
+            s11, s21 = self.data_to_np([s11, s21])
         ns11, ns21 = self._normalize(s11, s21)
         h = np.square(np.average(np.abs(ns11))) + np.square(
             alpha * np.average(np.abs(ns21))
@@ -75,8 +79,8 @@ class SignalProcessing:
         # TEOS MAGIC
         pass
 
-    def _normalize(self, s11, s21, norm) -> tuple:
-        return (s11 - norm[0], s21 - norm[1])
+    def _normalize(self, s11, s21) -> tuple:
+        return (s11 - self.norm[0], s21 - self.norm[1])
 
     def smoothstep(self, x, x_min=0, x_max=1, N=1):
         ## Smoothstep function https://en.wikipedia.org/wiki/Smoothstep, used for limiting data between a maximum and minimum in a 'smooth' way.
@@ -91,8 +95,11 @@ class SignalProcessing:
         return result
 
     def get_new_data(self):
-        data = self.stream[-1]  #  This has not been tested and might not work!!!
-        return (data[0].copy(), data[1].copy())
+        for data in self.stream:
+            return (
+                data[0].copy(),
+                data[1].copy(),
+            )  # This is not good practice. Might change later.
 
     def data_to_np(self, data) -> tuple[np.array]:
         ## Make data (i.e tuple of list of datapoints) into a tuple of numpy arrays of complex values

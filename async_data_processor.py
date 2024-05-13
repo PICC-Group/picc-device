@@ -49,7 +49,7 @@ class AsyncDataProcessor:
 
     async def run(self):
         consumer = asyncio.create_task(
-            self.signal_processing.process_data_continuously(self.data_stream)
+            self.signal_processing.process_data_continuously()
         )
         try:
             await asyncio.gather(consumer)
