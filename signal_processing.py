@@ -13,7 +13,13 @@ UPPER_VAL_LIM = 2.0  # Needs to be calibrated
 
 
 class SignalProcessing:
-    def __init__(self, data_stream, process_sleep_time=0.0001, smoothing_points: int=5,  verbose=False):
+    def __init__(
+        self,
+        data_stream,
+        process_sleep_time=0.0001,
+        smoothing_points: int = 5,
+        verbose=False,
+    ):
         self.data_stream = data_stream  # The stream from which to process data
         self.process_sleep_time = process_sleep_time
         self.smoothing_points = smoothing_points
@@ -32,34 +38,46 @@ class SignalProcessing:
                 print(f"Processed phase: {phase}, direction: {direction}")
             await asyncio.sleep(self.process_sleep_time)
 
-    def get_angle(self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0):
+    def get_angle(
+        self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0
+    ):
         ## Calculate angle from s11 and s21 data, ref_angle_data and ref_throttle_data is returned from setup
         ns11, ns21 = self._normalize(s11, s21)
-        ang = (np.average(np.abs(ns21)))/np.power((np.average(np.abs(ns11))),0.5)
+        ang = (np.average(np.abs(ns21))) / np.power((np.average(np.abs(ns11))), 0.5)
 
         if ref_angle_data is not None and ref_throttle_data is not None:
-            h = self.get_throttle(s11,s21, ref_throttle_data, alpha)
-            minval = h*ref_angle_data[0]+(1-h)*ref_angle_data[2] # value at minangle interpolated between min distance and max distance based on current throttle
-            maxval = h*ref_angle_data[1]+(1-h)*ref_angle_data[3] # value at maxangle interpolated between min distance and max distance based on current throttle
-            return self.smoothstep(ang,minval,maxval, 0) # Clamp the value between minval and maxval using a smoothstep function https://en.wikipedia.org/wiki/Smoothstep
+            h = self.get_throttle(s11, s21, ref_throttle_data, alpha)
+            minval = (
+                h * ref_angle_data[0] + (1 - h) * ref_angle_data[2]
+            )  # value at minangle interpolated between min distance and max distance based on current throttle
+            maxval = (
+                h * ref_angle_data[1] + (1 - h) * ref_angle_data[3]
+            )  # value at maxangle interpolated between min distance and max distance based on current throttle
+            return self.smoothstep(
+                ang, minval, maxval, 0
+            )  # Clamp the value between minval and maxval using a smoothstep function https://en.wikipedia.org/wiki/Smoothstep
         return ang
 
     def get_throttle(self, s11, s21, ref_throttle_data=None, alpha=3.0):
         ## Calculate throttle value from s11 and s21 data, ref_throttle_data is returned from setup
         ns11, ns21 = self._normalize(s11, s21)
-        h = np.square(np.average(np.abs(ns11))) + np.square(alpha*np.average(np.abs(ns21)))
+        h = np.square(np.average(np.abs(ns11))) + np.square(
+            alpha * np.average(np.abs(ns21))
+        )
         if ref_throttle_data is None:
             return np.sqrt(h)
         else:
-            return self.smoothstep(np.sqrt(h),ref_throttle_data[1],ref_throttle_data[0],0) # Clamp value between minimum throttle and maximum throttle (N=0 in smoothstep corresponds to normal clamp)
+            return self.smoothstep(
+                np.sqrt(h), ref_throttle_data[1], ref_throttle_data[0], 0
+            )  # Clamp value between minimum throttle and maximum throttle (N=0 in smoothstep corresponds to normal clamp)
 
     def fourier_filtering(self, s11, s21):
         # TEOS MAGIC
         pass
-    
+
     def _normalize(self, s11, s21, norm) -> tuple:
         return (s11 - norm[0], s21 - norm[1])
-    
+
     def smoothstep(self, x, x_min=0, x_max=1, N=1):
         ## Smoothstep function https://en.wikipedia.org/wiki/Smoothstep, used for limiting data between a maximum and minimum in a 'smooth' way.
         x = np.clip((x - x_min) / (x_max - x_min), 0, 1)
@@ -71,40 +89,50 @@ class SignalProcessing:
         result *= x ** (N + 1)
 
         return result
-    
+
     def get_new_data(self):
-        data = self.stream[-1] #  This has not been tested and might not work!!!
+        data = self.stream[-1]  #  This has not been tested and might not work!!!
         return (data[0].copy(), data[1].copy())
-    
+
     def data_to_np(self, data) -> tuple[np.array]:
         ## Make data (i.e tuple of list of datapoints) into a tuple of numpy arrays of complex values
         return np.array([[p.z for p in data[0]], [p.z for p in data[1]]])
-    
+
     def setup(self):
         i = 0
         while True:
             match i:
                 case 0:
-                    input("Taking empty refernce, make sure the space infront of the antenna is clear. Press Enter to continue.")
+                    input(
+                        "Taking empty refernce, make sure the space infront of the antenna is clear. Press Enter to continue."
+                    )
                     r_data = self.get_new_data()
                     self.norm = self.data_to_np(r_data)
                 case 1:
-                    input("Put strip grid at 2cm distance at minimum angle. Press Enter to continue.")
+                    input(
+                        "Put strip grid at 2cm distance at minimum angle. Press Enter to continue."
+                    )
                     mindist_minangle = self.get_new_data()
                 case 2:
-                    input("Put strip grid at 2cm distance at maximum angle (45 degrees). Press Enter to continue.")
+                    input(
+                        "Put strip grid at 2cm distance at maximum angle (45 degrees). Press Enter to continue."
+                    )
                     mindist_maxangle = self.get_new_data()
                 case 3:
-                    input("Put strip grid at 10cm distance at minimum angle. Press Enter to continue.")
+                    input(
+                        "Put strip grid at 10cm distance at minimum angle. Press Enter to continue."
+                    )
                     maxdist_minangle = self.get_new_data()
                 case 4:
-                    input("Put strip grid at 10cm distance at maximum angle (45 degrees). Press Enter to continue.")
+                    input(
+                        "Put strip grid at 10cm distance at maximum angle (45 degrees). Press Enter to continue."
+                    )
                     maxdist_maxangle = self.get_new_data()
                     print(mindist_maxangle == mindist_minangle)
             if i > 5:
                 break
-            i+=1
-        
+            i += 1
+
         s21max1 = np.average(np.abs(self.data_to_np(mindist_maxangle)[1]))
         s21max2 = np.average(np.abs(self.data_to_np(maxdist_maxangle)[1]))
         s11max1 = np.average(np.abs(self.data_to_np(mindist_minangle)[0]))
@@ -112,25 +140,41 @@ class SignalProcessing:
         if self.verbose:
             print(s11max1, s11max2)
 
-        self.alpha = np.sqrt((s11max1/s21max1 + s11max2/s21max2)/2) # Determine how much larger s11 is than s21
+        self.alpha = np.sqrt(
+            (s11max1 / s21max1 + s11max2 / s21max2) / 2
+        )  # Determine how much larger s11 is than s21
         if self.verbose:
             print(self.alpha)
 
         # [angle min at min distance, angle max at min distance, anlge min at max distance, angle max at max distance]
-        self.ref_angle_data =  [self.get_angle(*self.data_to_np(mindist_minangle)), self.get_angle(*self.data_to_np(mindist_maxangle)),
-                        self.get_angle(*self.data_to_np(maxdist_minangle)), self.get_angle(*self.data_to_np(maxdist_maxangle))]
+        self.ref_angle_data = [
+            self.get_angle(*self.data_to_np(mindist_minangle)),
+            self.get_angle(*self.data_to_np(mindist_maxangle)),
+            self.get_angle(*self.data_to_np(maxdist_minangle)),
+            self.get_angle(*self.data_to_np(maxdist_maxangle)),
+        ]
 
         # [average throttle at min distance, average throttle at max distance]
-        self.ref_throttle_data = [(self.get_throttle(*self.data_to_np(mindist_minangle))+self.get_throttle(*self.data_to_np(mindist_minangle)))/2,
-                            (self.get_throttle(*self.data_to_np(maxdist_minangle))+self.get_throttle(*self.data_to_np(maxdist_maxangle)))/2]
+        self.ref_throttle_data = [
+            (
+                self.get_throttle(*self.data_to_np(mindist_minangle))
+                + self.get_throttle(*self.data_to_np(mindist_minangle))
+            )
+            / 2,
+            (
+                self.get_throttle(*self.data_to_np(maxdist_minangle))
+                + self.get_throttle(*self.data_to_np(maxdist_maxangle))
+            )
+            / 2,
+        ]
 
         if self.verbose:
             print(self.ref_angle_data, self.ref_throttle_data, self.alpha)
 
     async def _mean_smoothing(self):
         ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################
-        """Calculates the mean value of n number of S11 and S21 values. 
-        No value is removed. 
+        """Calculates the mean value of n number of S11 and S21 values.
+        No value is removed.
 
         Returns:
             list[complex]: mean S11 and S21 values
@@ -147,17 +191,19 @@ class SignalProcessing:
             for _ in range(n):
                 item = await self.queue.get()
                 temp_storage.append(item)
-            
+
             # Calculate mean for S11 and S21
             s11_values = [item[0] for item in temp_storage]
             s21_values = [item[1] for item in temp_storage]
             mean_s11 = np.mean(s11_values)
             mean_s21 = np.mean(s21_values)
-            
+
             # Put the items back in the queue
             for item in reversed(temp_storage):
-                self.queue._queue.appendleft(item)  # Directly manipulating the internal deque
-            
+                self.queue._queue.appendleft(
+                    item
+                )  # Directly manipulating the internal deque
+
             return [mean_s11, mean_s21]
 
         except Exception as e:
@@ -170,8 +216,8 @@ class SignalProcessing:
 
     async def _weighted_mean_smoothing(self, n):
         ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################
-        """Calculates the mean value of n number of S11 and S21 values. 
-        No value is removed. 
+        """Calculates the mean value of n number of S11 and S21 values.
+        No value is removed.
 
         Returns:
             list[complex]: mean S11 and S21 values
@@ -188,25 +234,29 @@ class SignalProcessing:
             for _ in range(n):
                 item = await self.queue.get()
                 temp_storage.append(item)
-            
+
             # Calculate weights based on n. w1 = 1, w_(n+1) = 0
             weights = [1 - (0.5 / (n - 1)) * i if n > 1 else 1 for i in range(n)]
 
             # Calculate mean for S11 and S21
-            s11_values = [item[0] * weight for item, weight in zip(temp_storage, weights)]
-            s21_values = [item[1] * weight for item, weight in zip(temp_storage, weights)]
+            s11_values = [
+                item[0] * weight for item, weight in zip(temp_storage, weights)
+            ]
+            s21_values = [
+                item[1] * weight for item, weight in zip(temp_storage, weights)
+            ]
             total_weight = sum(weights)
             mean_s11 = sum(s11_values) / total_weight
             mean_s21 = sum(s21_values) / total_weight
-            
-            # Puts all items back into their original order in the queue. 
+
+            # Puts all items back into their original order in the queue.
             for item in reversed(temp_storage):
                 self.queue._queue.appendleft(item)
-            
+
             # Reomoves the firs item.
-            #for item in reversed(temp_storage[1:]):  # Skip the first item
-             #    self.queue._queue.appendleft(item)
-            
+            # for item in reversed(temp_storage[1:]):  # Skip the first item
+            #    self.queue._queue.appendleft(item)
+
             return [mean_s11, mean_s21]
 
         except Exception as e:

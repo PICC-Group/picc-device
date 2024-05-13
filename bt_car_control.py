@@ -1,8 +1,15 @@
 import math
 from bleak import BleakClient, BleakScanner
 
+
 class BTSender:
-    def __init__(self, device_name, SERVICE_UUID="FFE0", CHARACTERISTIC_UUID="FFE1", max_motor_speed=255):
+    def __init__(
+        self,
+        device_name,
+        SERVICE_UUID="FFE0",
+        CHARACTERISTIC_UUID="FFE1",
+        max_motor_speed=255,
+    ):
         self.device_name = device_name
         self.max_motor_speed = max_motor_speed
         self.SERVICE_UUID = SERVICE_UUID
@@ -36,8 +43,13 @@ class BTSender:
 
     async def update_speed(self, angle, throttle):
         if self.client and self.client.is_connected:
-            left_speed, right_speed = self.angle_throttle_to_motor_speeds(angle, throttle)
-            assert left_speed <= self.max_motor_speed and right_speed <= self.max_motor_speed
+            left_speed, right_speed = self.angle_throttle_to_motor_speeds(
+                angle, throttle
+            )
+            assert (
+                left_speed <= self.max_motor_speed
+                and right_speed <= self.max_motor_speed
+            )
             message = f"A#{left_speed}#{right_speed}#\n"
             await self.send_bluetooth_message(message)
         else:
@@ -71,4 +83,3 @@ class BTSender:
             await self.send_bluetooth_message(message)
         else:
             print("Client not connected.")
-
