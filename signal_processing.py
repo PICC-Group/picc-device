@@ -18,6 +18,11 @@ class SignalProcessing:
         self.process_sleep_time = process_sleep_time
         self.smoothing_points = smoothing_points
         self.verbose = verbose
+        self.norm = None
+        self.ref_angle_data = None
+        self.ref_throttle_data = None
+        self.alpha = None
+        self.setup()
 
     async def process_data_continuously(self):
         for s11, s21 in self.data_stream:
@@ -66,6 +71,61 @@ class SignalProcessing:
         result *= x ** (N + 1)
 
         return result
+    
+    def get_new_data(self):
+        data = self.stream[-1] #  This has not been tested and might not work!!!
+        return (data[0].copy(), data[1].copy())
+    
+    def data_to_np(self, data) -> tuple[np.array]:
+        ## Make data (i.e tuple of list of datapoints) into a tuple of numpy arrays of complex values
+        return np.array([[p.z for p in data[0]], [p.z for p in data[1]]])
+    
+    def setup(self):
+        i = 0
+        while True:
+            match i:
+                case 0:
+                    input("Taking empty refernce, make sure the space infront of the antenna is clear. Press Enter to continue.")
+                    r_data = self.get_new_data()
+                    self.norm = self.data_to_np(r_data)
+                case 1:
+                    input("Put strip grid at 2cm distance at minimum angle. Press Enter to continue.")
+                    mindist_minangle = self.get_new_data()
+                case 2:
+                    input("Put strip grid at 2cm distance at maximum angle (45 degrees). Press Enter to continue.")
+                    mindist_maxangle = self.get_new_data()
+                case 3:
+                    input("Put strip grid at 10cm distance at minimum angle. Press Enter to continue.")
+                    maxdist_minangle = self.get_new_data()
+                case 4:
+                    input("Put strip grid at 10cm distance at maximum angle (45 degrees). Press Enter to continue.")
+                    maxdist_maxangle = self.get_new_data()
+                    print(mindist_maxangle == mindist_minangle)
+            if i > 5:
+                break
+            i+=1
+        
+        s21max1 = np.average(np.abs(self.data_to_np(mindist_maxangle)[1]))
+        s21max2 = np.average(np.abs(self.data_to_np(maxdist_maxangle)[1]))
+        s11max1 = np.average(np.abs(self.data_to_np(mindist_minangle)[0]))
+        s11max2 = np.average(np.abs(self.data_to_np(maxdist_minangle)[0]))
+        if self.verbose:
+            print(s11max1, s11max2)
+
+        self.alpha = np.sqrt((s11max1/s21max1 + s11max2/s21max2)/2) # Determine how much larger s11 is than s21
+        if self.verbose:
+            print(self.alpha)
+
+        # [angle min at min distance, angle max at min distance, anlge min at max distance, angle max at max distance]
+        self.ref_angle_data =  [self.get_angle(*self.data_to_np(mindist_minangle)), self.get_angle(*self.data_to_np(mindist_maxangle)),
+                        self.get_angle(*self.data_to_np(maxdist_minangle)), self.get_angle(*self.data_to_np(maxdist_maxangle))]
+
+        # [average throttle at min distance, average throttle at max distance]
+        self.ref_throttle_data = [(self.get_throttle(*self.data_to_np(mindist_minangle))+self.get_throttle(*self.data_to_np(mindist_minangle)))/2,
+                            (self.get_throttle(*self.data_to_np(maxdist_minangle))+self.get_throttle(*self.data_to_np(maxdist_maxangle)))/2]
+
+        if self.verbose:
+            print(self.ref_angle_data, self.ref_throttle_data, self.alpha)
 
     async def _mean_smoothing(self):
         ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################
