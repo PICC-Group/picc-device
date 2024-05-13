@@ -1,7 +1,7 @@
 from pynanovna import NanoVNAWorker
 from pynanovna import RFTools
 import matplotlib
-matplotlib.use("tkagg")
+matplotlib.use("tkagg") # Saw this on stack-overflow to fix bug with live plotting
 from matplotlib import pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
@@ -102,7 +102,7 @@ def get_angle(s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0):
         h = get_throttle(s11,s21, ref_throttle_data, alpha)
         minval = h*ref_angle_data[0]+(1-h)*ref_angle_data[2] # value at minangle interpolated between min distance and max distance based on current throttle
         maxval = h*ref_angle_data[1]+(1-h)*ref_angle_data[3] # value at maxangle interpolated between min distance and max distance based on current throttle
-        return smoothstep(ang,minval,maxval) # Clamp the value between minval and maxval using a smoothstep function https://en.wikipedia.org/wiki/Smoothstep
+        return smoothstep(ang,minval,maxval, 0) # Clamp the value between minval and maxval using a smoothstep function https://en.wikipedia.org/wiki/Smoothstep
     else:
         return ang
     #return smoothstep(ang,0.05,0.20)
@@ -150,7 +150,7 @@ def setup():
     alpha = np.sqrt((s11max1/s21max1 + s11max2/s21max2)/2) # Determine how much larger s11 is than s21
     print(alpha)
 
-    # [anlge min at min distance, angle max at min distance, anlge min at max distance, angle max at max distance]
+    # [angle min at min distance, angle max at min distance, anlge min at max distance, angle max at max distance]
     ref_angle_data =  [get_angle(*data_to_np(mindist_minangle)), get_angle(*data_to_np(mindist_maxangle)),
                     get_angle(*data_to_np(maxdist_minangle)), get_angle(*data_to_np(maxdist_maxangle))]
     
@@ -166,32 +166,28 @@ data_old = [] # Keep track of last sweep
 i = 0 # Loop idx
 t0 = time.time() # Start time
 
-
 refs = setup() # Setup ref values
 
 stream = worker.stream_data(datafile)
 
 for data in stream:
-    if (data == data_old):
+    if (data == data_old): # Check that we have new data
         continue
     
     N = len(data[0])
     s11 = to_complex(data[0])
     s21 = to_complex(data[1])
-    
-    #if (i==0):
-    #    norm = (s11, s21)
 
     h = get_throttle(s11, s21, refs[1])
     ang = get_angle(s11,s21,refs[0], refs[1])
     
     print("throttle: ", h, " ang: ", ang)
-    ys.append(h)
-    y2s.append(ang)
-    animate()
-    data_old = (data[0].copy(), data[1].copy())
+    ys.append(h) # add throttle to graph
+    y2s.append(ang) # add angle to graph
+    animate() # plot
+
+    data_old = (data[0].copy(), data[1].copy()) # Store copy of old data
     i += 1
     t1 = time.time()
 
-worker.kill()
-
+worker.kill() # This will never be reached.
