@@ -1,14 +1,10 @@
 import asyncio
+import pynanovna
 
 from signal_processing import (
     SignalProcessing,
 )
-from simulate_data import (
-    SimulateData,
-)
-from nanovna_data import (
-    NanoVNAData
-)
+
 
 # File used for calibratin the vna. 
 CALIBRATION_FILE = (
@@ -31,27 +27,21 @@ class AsyncDataProcessor:
         self.process_sleep_time = process_sleep_time
         self.verbose = verbose
         self.datafile = datafile
-        self.data_queue = asyncio.Queue()  # Queue for inter-class communication
-        if self.simulate:  # Runs on simulated data.
-            self.data_source = SimulateData(data_queue=self.data_queue, producer_sleep_time=self.producer_sleep_time, verbose=self.verbose)
-        else:  # Runs on streamed data from the vna.
-            self.data_source = NanoVNAData(data_queue=self.data_queue, producer_sleep_time=self.producer_sleep_time, verbose=self.verbose)
 
-        self.signal_processing = SignalProcessing(
-            data_queue=self.data_queue, process_sleep_time=self.process_sleep_time, verbose=self.verbose
-        )  # Pass queue to SignalProcessing
+        self.data_source = pynanovna.NanoVNAWorker(verbose=verbose)
+        #self.data_source.calibrate()  This needs to be done through a terminal atm.
+        self.data_source.set_sweep(2.9e9, 3.1e9, 1, 101)
+        self.data_stream = self.data_source.stream_data(datafile)
+
+        self.signal_processing = SignalProcessing(self.data_stream, process_sleep_time=self.process_sleep_time, verbose=self.verbose)
         self.running = True
 
     async def run(self):
-        producer = asyncio.create_task(
-            self.data_source.generate_data_continuously(self.datafile)
-        )
-
         consumer = asyncio.create_task(
-            self.signal_processing.process_data_continuously()
+            self.signal_processing.process_data_continuously(self.data_stream)
         )
         try:
-            await asyncio.gather(producer, consumer)
+            await asyncio.gather(consumer)
         except asyncio.CancelledError:
             pass  # Handle cleanup if necessary
 

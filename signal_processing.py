@@ -1,4 +1,3 @@
-from numpy import angle
 import numpy as np
 import math
 import asyncio
@@ -13,32 +12,36 @@ UPPER_VAL_LIM = 2.0  # Needs to be calibrated
 
 
 class SignalProcessing:
-    def __init__(self, data_queue, process_sleep_time=0.0001, smoothing_points: int=5,  verbose=False):
-        self.data_queue = data_queue  # The queue from which to consume data
+    def __init__(self, data_stream, process_sleep_time=0.0001, smoothing_points: int=5,  verbose=False):
+        self.data_stream = data_stream  # The stream from which to process data
         self.process_sleep_time = process_sleep_time
         self.smoothing_points = smoothing_points
-        self.norm = []
         self.verbose = verbose
 
     async def process_data_continuously(self):
-        counter = 0
-        while True:
-            s11_data, s21_data = await self.data_queue.get()
-            if counter < 20:
-                self.set_norm(s11_data, s21_data)
-            elif counter <= 10:
-                counter += 1
-                continue
-            counter += 1
-            # Process the data using existing 
-            phase = self.process_throttle_phase(s11_data, s21_data, self.norm)
-            direction = self.process_direction(s11_data, s21_data)
+        for s11, s21 in self.data_stream:
+            phase = self.calculate_angle(s11, s21)
+            direction = self.calculate_throttle(s11, s21)
             if self.verbose:
                 print(f"Processed phase: {phase}, direction: {direction}")
-            self.data_queue.task_done()
             await asyncio.sleep(self.process_sleep_time)
 
+    @staticmethod
+    def calculate_angle(s11_data, s21_data, norm):
+        # OSCARS MAGIC
+        pass
+
+    @staticmethod
+    def calculate_throttle(s11_data, s21_data):
+        # OSCARS MAGIC
+        pass
+
+    def _fourier_filtering(self, s11, s21):
+        # TEOS MAGIC
+        pass
+
     async def _mean_smoothing(self):
+        ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################
         """Calculates the mean value of n number of S11 and S21 values. 
         No value is removed. 
 
@@ -77,8 +80,9 @@ class SignalProcessing:
                 item = temp_storage.pop()
                 await self.queue.put(item)
             return None, None
-        
+
     async def _weighted_mean_smoothing(self, n):
+        ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################
         """Calculates the mean value of n number of S11 and S21 values. 
         No value is removed. 
 
@@ -120,53 +124,4 @@ class SignalProcessing:
 
         except Exception as e:
             print(f"An error occurred: {e}")
-            # In case of an error, ensure all items are put back
-            while temp_storage:
-                item = temp_storage.pop()
-                await self.queue.put(item)
             return None, None
-
-    def set_norm(self, s11, s12):
-        self.norm = [s11, s12]
-
-    @staticmethod
-    def process_throttle_phase(s11_data, s21_data, norm):
-        norm_mag_sum_s11 = 0
-        norm_mag_sum_s21 = 0
-        res = 0
-        alpha = 0.25
-        beta = 1
-
-        for i in range(0, len(s11_data)):
-            norm_mag_sum_s11 += alpha * np.square(np.abs(s11_data[i] - norm[0][i]))
-            norm_mag_sum_s21 += beta * np.square(np.abs(s21_data[i] - norm[1][i]))
-            res += np.sqrt(norm_mag_sum_s11/ len(s11_data) + norm_mag_sum_s21/ len(s21_data))
-        res *= 1000
-        # TODO: Handle faulty input and output data. 
-        # Calculates the the S11 phase and uses that to determine the throttle. 
-        #phase = angle(s11_data)
-        #output = K * phase + M
-        #val = abs(s11_data)
-
-        #if phase < LOWER_PHASE_LIM:
-        #    output = 1
-        #elif (phase > UPPER_PHASE_LIM) or (val < UPPER_VAL_LIM):
-        #    output = 0
-        print(norm_mag_sum_s11, norm_mag_sum_s21)
-        print(res)
-        return res
-        #return output
-
-    @staticmethod
-    def process_direction(s11_data, s21_data):
-        # TODO: Handle faulty input and output data. 
-        # S11 and S21 added.
-        #s11_val = abs(s11_data)
-        #s21_val = abs(s21_data)
-        s11_val = np.abs(s11_data)
-        s21_val = np.abs(s21_data)
-
-        output = s11_val / s21_val
-        # Need to look at data to do more.
-
-        return output
