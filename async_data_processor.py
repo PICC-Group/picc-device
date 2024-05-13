@@ -12,12 +12,12 @@ from nanovna_data import (
 
 # File used for calibratin the vna. 
 CALIBRATION_FILE = (
-    "../oscars_cal.cal" #"./test_cali.s2p"  # "Calibration_file_2024-04-12 12:23:02.604314.s2p"
+    "../oscars_cal.cal"
 )
 
 
 class AsyncDataProcessor:
-    def __init__(self, simulate: bool=False, datafile: str=False, producer_sleep_time: float=0.1, process_sleep_time: float= 0.0001, verbose: bool=False):
+    def __init__(self, datafile: str=False, producer_sleep_time: float=0.1, process_sleep_time: float= 0.0001, verbose: bool=False):
         """Initialize a AsyncDataProcessor object.
 
         Args:
@@ -27,7 +27,6 @@ class AsyncDataProcessor:
             process_sleep_time (foat): Sleep time after processing data function is called. 
             verbose (bool): Prints information if true. 
         """
-        self.simulate = simulate  # True if we are simulating data, false if we are streaming from the nanoVNA or using Data file
         self.producer_sleep_time = producer_sleep_time
         self.process_sleep_time = process_sleep_time
         self.verbose = verbose
