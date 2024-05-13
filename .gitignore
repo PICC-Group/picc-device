@@ -1,0 +1,6 @@
+__pycache__/
+.DS_Store
+*.cal
+*.s1p
+*.s2p
+*.csv

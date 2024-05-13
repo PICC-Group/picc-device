@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #333; color: white; text-align: center; }
+        .container { padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .data-boxes { display: flex; width: 100%; justify-content: center; margin-top: 20px; }
+        .data-box { margin: 10px; padding: 10px; background: #444; display: flex; flex-direction: column; align-items: center; flex-basis: 45%; }
+        .charts-container { display: flex; width: 100%; justify-content: space-around; margin-top: 20px; }
+        .chart-box { width: 45%; }
+        #wheel { transform-origin: center; transition: transform 0.5s; }
+        .controls { display: flex; justify-content: space-between; width: 100%; }
+        .control-item { margin: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>The PICC Device</h1>
+        <div class="data-boxes">
+            <div class="data-box">
+                <h2>Wheel (Angle)</h2>
+                <svg id="wheel" width="100" height="100" viewbox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="white" stroke-width="3" fill="none" />
+                    <line x1="50" y1="50" x2="50" y2="20" stroke="red" stroke-width="3" />
+                </svg>
+                <div class="controls">
+                    <input class="control-item" type="text" placeholder="Input 1">
+                    <input class="control-item" type="text" placeholder="Input 2">
+                    <button class="control-item">Button 1</button>
+                    <button class="control-item">Button 2</button>
+                </div>
+            </div>
+            <div class="data-box">
+                <h2>Speedometer (Throttle)</h2>
+                <p id="throttle">0</p>
+                <div class="controls">
+                    <input class="control-item" type="text" placeholder="Input 3">
+                    <input class="control-item" type="text" placeholder="Input 4">
+                    <button class="control-item">Button 3</button>
+                    <button class="control-item">Button 4</button>
+                    <button class="control-item">Button 5</button>
+                </div>
+            </div>
+        </div>
+        <div class="charts-container">
+            <div class="chart-box">
+                <canvas id="angleChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <canvas id="throttleChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const angleData = { labels: [], datasets: [{ label: 'Angle', data: [], borderColor: 'red', fill: false }] };
+        const throttleData = { labels: [], datasets: [{ label: 'Throttle', data: [], borderColor: 'blue', fill: false }] };
+        const configAngle = { type: 'line', data: angleData, options: { scales: { y: { beginAtZero: true } } } };
+        const configThrottle = { type: 'line', data: throttleData, options: { scales: { y: { beginAtZero: true } } } };
+        const angleChart = new Chart(document.getElementById('angleChart').getContext('2d'), configAngle);
+        const throttleChart = new Chart(document.getElementById('throttleChart').getContext('2d'), configThrottle);
+
+        function updateCharts(angle, throttle) {
+            if (angleData.labels.length > 10) {
+                angleData.labels.shift();
+                angleData.datasets[0].data.shift();
+            }
+            if (throttleData.labels.length > 10) {
+                throttleData.labels.shift();
+                throttleData.datasets[0].data.shift();
+            }
+            let label = new Date().toLocaleTimeString();
+            angleData.labels.push(label);
+            angleData.datasets[0].data.push(angle);
+            throttleData.labels.push(label);
+            throttleData.datasets[0].data.push(throttle);
+            angleChart.update();
+            throttleChart.update();
+        }
+
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('throttle').innerText = data.throttle + '%';
+                    document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
+                    updateCharts(data.angle, data.throttle);
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Update data every 500ms
+        setInterval(fetchData, 500);
+    </script>
+</body>
+</html>
