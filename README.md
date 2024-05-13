@@ -6,7 +6,7 @@ Add later...
 ### The PICC Group
 The PICC Group is a project in the 2024 IEEE AP-S Student Design Contest. 
 [The PICC Group Website](https://picc-group.github.io)
-![The PICC Group](picc-logo.png)
+[The PICC Group](picc-logo.png)
 ##### Members
 - Teo Bergkvist
 - Otto Edgren
