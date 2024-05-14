@@ -10,8 +10,7 @@ This code is devoloped by The PICC Group at Lund University for the 2024 IEEE AP
 
 ## Setup
 - Clone the repository.
-- Install pynanovna with `pip install pynanovna`.
-- Run the setup.py file with `python setup.py`.
+- Run the setup.py file with `sudo python setup.py`.
 - Restart the Raspberry Pi.
 
 ### The PICC Group
