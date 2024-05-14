@@ -1,7 +1,8 @@
 import numpy as np
 import math
-import asyncio
+from time import sleep
 from scipy.special import comb
+
 
 # S11 phase throttle parameters
 UPPER_PHASE_LIM = 0.8 * math.pi
@@ -30,13 +31,14 @@ class SignalProcessing:
         self.alpha = None
         self.setup()
 
-    async def process_data_continuously(self):
+    def process_data_continuously(self):
         for s11, s21 in self.stream:
-            phase = self.get_angle(s11, s21)
-            direction = self.get_throttle(s11, s21)
+            phase = self.get_angle(s11, s21, self.ref_angle_data, self.ref_throttle_data, self.alpha)
+            direction = self.get_throttle(s11, s21, self.ref_throttle_data, self.alpha)
             if self.verbose:
                 print(f"Processed phase: {phase}, direction: {direction}")
-            await asyncio.sleep(self.process_sleep_time)
+            sleep(self.process_sleep_time)
+            yield phase, direction
 
     def get_angle(
         self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0
@@ -72,7 +74,7 @@ class SignalProcessing:
             return np.sqrt(h)
         else:
             return self.smoothstep(
-                np.sqrt(h), ref_throttle_data[1], ref_throttle_data[0], 0
+                np.sqrt(h), 0, ref_throttle_data[0], 0 # This should be possible to control.
             )  # Clamp value between minimum throttle and maximum throttle (N=0 in smoothstep corresponds to normal clamp)
 
     def fourier_filtering(self, s11, s21):

@@ -86,7 +86,7 @@
             fetch('/data')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('throttle').innerText = data.throttle + '%';
+                    document.getElementById('throttle').innerText = data.throttle * 100 + '%';
                     document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
                     updateCharts(data.angle, data.throttle);
                 })
