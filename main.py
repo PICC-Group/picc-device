@@ -4,15 +4,15 @@ import requests
 from signal_processing import SignalProcessing
 from flask import Flask, render_template, jsonify, request
 
-DATA_FILE = "../save_plate.csv"
-CALIBRATION_FILE = "../Calibration_file_2024-04-23-152338.280634.cal"
-VERBOSE = True
+DATA_FILE = False#"../save_plate.csv"
+CALIBRATION_FILE = "../cal0514.cal"
+VERBOSE = False
 PROCESS_SLEEP_TIME = 0.0001
 
 # Flask application setup
 app = Flask(__name__)
 
-latest_data = {"phase": 0, "throttle": 0}  # Initialize with default values
+latest_data = {"angle": 0, "throttle": 0}  # Initialize with default values
 received_data = {}  # Dictionary to store received data
 
 @app.route("/")
@@ -44,7 +44,7 @@ def run_flask():
 
 # NanoVNA data processing
 data_source = pynanovna.NanoVNAWorker(verbose=VERBOSE)
-data_source.calibrate(CALIBRATION_FILE)  # This needs to be done through a terminal atm.
+data_source.calibrate(load_file=CALIBRATION_FILE)  # This needs to be done through a terminal atm.
 data_source.set_sweep(2.9e9, 3.1e9, 1, 101)
 data_stream = data_source.stream_data(DATA_FILE)
 
@@ -59,9 +59,9 @@ flask_thread.start()
 
 data_processor = signal_processing.process_data_continuously()
 
-for phase, throttle in data_processor:
-    print(phase, throttle)
-    send_data = {'phase': phase, 'throttle': throttle}
+for angle, throttle in data_processor:
+    print(angle, throttle)
+    send_data = {'angle': angle, 'throttle': throttle}
     latest_data = send_data
     try:
         response = requests.post("http://127.0.0.1:5000/update_data", json=send_data)

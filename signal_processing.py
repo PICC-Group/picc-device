@@ -33,12 +33,13 @@ class SignalProcessing:
 
     def process_data_continuously(self):
         for s11, s21 in self.stream:
-            phase = self.get_angle(s11, s21, self.ref_angle_data, self.ref_throttle_data, self.alpha)
-            direction = self.get_throttle(s11, s21, self.ref_throttle_data, self.alpha)
+            angle = self.get_angle(s11, s21, self.ref_angle_data, self.ref_throttle_data, self.alpha)
+            throttle = self.get_throttle(s11, s21, self.ref_throttle_data, self.alpha)
+            print(angle)
             if self.verbose:
-                print(f"Processed phase: {phase}, direction: {direction}")
+                print(f"Processed phase: {angle}, direction: {throttle}")
             sleep(self.process_sleep_time)
-            yield phase, direction
+            yield angle, throttle
 
     def get_angle(
         self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0
@@ -60,7 +61,7 @@ class SignalProcessing:
             return self.smoothstep(
                 ang, minval, maxval, 0
             )  # Clamp the value between minval and maxval using a smoothstep function https://en.wikipedia.org/wiki/Smoothstep
-        return ang
+        return ang * 360
 
     def get_throttle(self, s11, s21, ref_throttle_data=None, alpha=3.0):
         ## Calculate throttle value from s11 and s21 data, ref_throttle_data is returned from setup
