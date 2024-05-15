@@ -24,6 +24,9 @@ class BTSender:
                 return await self.client.connect()
         print("Did not find bluetooth name: ", self.device_name)
         return False
+    
+    def is_connected(self):
+        return self.client and self.client.is_connected
 
     def angle_throttle_to_motor_speeds(self, angle, throttle):
         angle_rad = math.radians(angle)

@@ -28,21 +28,21 @@
                     <line x1="50" y1="50" x2="50" y2="20" stroke="red" stroke-width="3" />
                 </svg>
                 <div class="controls">
-                    <input class="control-item" type="text" placeholder="Input 1">
-                    <input class="control-item" type="text" placeholder="Input 2">
-                    <button class="control-item">Button 1</button>
-                    <button class="control-item">Button 2</button>
+                    <input id="input1" class="control-item" type="text" placeholder="Input 1">
+                    <input id="input2" class="control-item" type="text" placeholder="Input 2">
+                    <button class="control-item" onclick="sendData('button1')">Button 1</button>
+                    <button class="control-item" onclick="sendData('button2')">Button 2</button>
                 </div>
             </div>
             <div class="data-box">
                 <h2>Speedometer (Throttle)</h2>
                 <p id="throttle">0</p>
                 <div class="controls">
-                    <input class="control-item" type="text" placeholder="Input 3">
-                    <input class="control-item" type="text" placeholder="Input 4">
-                    <button class="control-item">Button 3</button>
-                    <button class="control-item">Button 4</button>
-                    <button class="control-item">Button 5</button>
+                    <input id="input3" class="control-item" type="text" placeholder="Input 3">
+                    <input id="input4" class="control-item" type="text" placeholder="Input 4">
+                    <button class="control-item" onclick="sendData('button3')">Button 3</button>
+                    <button class="control-item" onclick="sendData('button4')">Button 4</button>
+                    <button class="control-item" onclick="sendData('button5')">Button 5</button>
                 </div>
             </div>
         </div>
@@ -91,6 +91,24 @@
                     updateCharts(data.angle, data.throttle);
                 })
                 .catch(error => console.error('Error:', error));
+        }
+
+        function sendData(buttonId) {
+            const data = {
+                input1: document.getElementById('input1').value,
+                input2: document.getElementById('input2').value,
+                input3: document.getElementById('input3').value,
+                input4: document.getElementById('input4').value,
+                button: buttonId
+            };
+            fetch('/receive_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => console.log('Success:', data))
+            .catch(error => console.error('Error:', error));
         }
 
         // Update data every 500ms
