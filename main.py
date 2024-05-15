@@ -43,7 +43,7 @@ def receive_data():
     return jsonify({"status": "success", "data": received_data})
 
 def run_flask():
-    app.run(debug=False, use_reloader=False)
+    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
 # NanoVNA Setup
 data_source = pynanovna.NanoVNAWorker(verbose=VERBOSE)
