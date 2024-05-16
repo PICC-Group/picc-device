@@ -1,6 +1,6 @@
 # The main project repository for the PICC-Device.
 
-The purpose is to process signals from a NanoVNA to controll a RC car. This repository contains everything
+The purpose is to process signals from a NanoVNA to controll an RC car. This repository contains everything needed to controll an rc car with the PICC-Device.
 - The S-parameters S11 and S21 from the NanoVNA are the inputs and the code will output distance and angle values continuously.
 - A web app is launched at `http://ip-address:5000/` creating an interface showing angle, distance, other system data.
 - System configuration and settings can be altered through this interface.
