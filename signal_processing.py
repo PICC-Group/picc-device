@@ -2,6 +2,8 @@ import numpy as np
 import math
 from time import sleep
 from scipy.special import comb
+from scipy.fft import ifft
+from scipy.fft import fft
 
 
 # S11 phase throttle parameters
@@ -79,8 +81,38 @@ class SignalProcessing:
             )  # Clamp value between minimum throttle and maximum throttle (N=0 in smoothstep corresponds to normal clamp)
 
     def fourier_filtering(self, s11, s21):
-        # TEOS MAGIC
-        pass
+        #Filtering the signal using FFT
+        ######### Returns complex values ############
+        c1 = [p.z for p in s11]
+        c1 = np.array(c1)
+        c2 = [p.z for p in s21]
+        c2 = np.array(c2)
+        c1_filtered = self._fft_hanning(c1)
+        c2_filtered = self._fft_hanning(c2)
+        
+        return c1_filtered, c2_filtered
+    
+    def _fft_hanning(self, c):
+        #Using ifft, then a hanning window and finally fft
+        pad_size = 16384-len(c)
+        c = np.pad([p for p in c], (int(pad_size/2), int(pad_size/2)), 'constant')
+        c = ifft(c)
+        index_of_peak = 0
+        if np.max(c) > 0:
+            index_of_peak = np.argmax(np.abs(c))
+            window_size = 750
+            if index_of_peak - window_size // 2 < 0 or index_of_peak + window_size // 2 > len(c):
+                window_size = 0
+            start_index = index_of_peak-window_size/2
+            hanning_window = np.concatenate((np.zeros(int(start_index)), np.hanning(window_size), np.zeros(len(c) - (index_of_peak + window_size//2))))
+            c_modified = np.copy(c)
+            c_modified = c_modified.astype(hanning_window.dtype)
+            c_modified *= hanning_window
+        else:
+            c_modified = np.copy(c)
+        #Zero padding before fft again gives weird results
+        c_modified = np.pad([p for p in c_modified], (int(pad_size/2), int(pad_size/2)), 'constant')
+        return fft(c_modified)
 
     def _normalize(self, s11, s21) -> tuple:
         return (s11 - self.norm[0], s21 - self.norm[1])
