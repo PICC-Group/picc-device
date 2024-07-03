@@ -45,6 +45,18 @@ class BTSender:
         await self.client.write_gatt_char(self.CHARACTERISTIC_UUID, message.encode())
 
     async def update_speed(self, angle, throttle):
+        updated_angle = 0
+        updated_throttle = throttle
+        if angle < -22.5:
+            updated_angle = -45
+        elif angle > 22.5:
+            updated_angle = 45
+        else:
+            updated_angle = 0
+        
+        if updated_throttle < 0.1:
+            updated_throttle = 0
+
         if self.client and self.client.is_connected:
             left_speed, right_speed = self.angle_throttle_to_motor_speeds(
                 angle, throttle
