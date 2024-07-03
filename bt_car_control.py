@@ -9,7 +9,7 @@ class BTSender:
         SERVICE_UUID="FFE0",
         CHARACTERISTIC_UUID="FFE1",
         max_motor_speed=255,
-        min_motor_speed=30,
+        min_motor_speed=20,
     ):
         self.device_name = device_name
         self.max_motor_speed = max_motor_speed
@@ -31,7 +31,7 @@ class BTSender:
         return self.client and self.client.is_connected
 
     def angle_throttle_to_motor_speeds(self, angle, throttle):
-        if throttle==0:
+        if throttle <= 0.05:
             return 0,0
         
         angle_rad = math.radians(angle)
@@ -53,14 +53,12 @@ class BTSender:
         updated_angle = 0
         updated_throttle = throttle
         if angle < -35:
-            updated_angle = -90
+            updated_angle = -45
         elif angle > 35:
-            updated_angle = 90
+            updated_angle = 45
         else:
             updated_angle = 0
         
-        if updated_throttle < 0.1:
-            updated_throttle = 0
 
         if self.client and self.client.is_connected:
             left_speed, right_speed = self.angle_throttle_to_motor_speeds(
