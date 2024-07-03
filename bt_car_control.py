@@ -9,6 +9,7 @@ class BTSender:
         SERVICE_UUID="FFE0",
         CHARACTERISTIC_UUID="FFE1",
         max_motor_speed=255,
+        min_motor_speed=30,
     ):
         self.device_name = device_name
         self.max_motor_speed = max_motor_speed
@@ -29,6 +30,9 @@ class BTSender:
         return self.client and self.client.is_connected
 
     def angle_throttle_to_motor_speeds(self, angle, throttle):
+        if throttle==0:
+            return 0,0
+        
         angle_rad = math.radians(angle)
         right_multiplier = math.cos(angle_rad) - math.sin(angle_rad)
         left_multiplier = math.cos(angle_rad) + math.sin(angle_rad)
@@ -37,8 +41,8 @@ class BTSender:
         left_multiplier /= max_multiplier
         right_multiplier /= max_multiplier
         # Apply throttle and limit to maximum motor speed
-        left_speed = int(left_multiplier * throttle * self.max_motor_speed)
-        right_speed = int(right_multiplier * throttle * self.max_motor_speed)
+        left_speed = int(left_multiplier * throttle * (self.max_motor_speed-self.min_motor_speed)) + self.min_motor_speed
+        right_speed = int(right_multiplier * throttle * (self.max_motor_speed-self.min_motor_speed)) + self.min_motor_speed
         return left_speed, right_speed
 
     async def send_bluetooth_message(self, message):
@@ -48,9 +52,9 @@ class BTSender:
         updated_angle = 0
         updated_throttle = throttle
         if angle < -35:
-            updated_angle = -45
+            updated_angle = -90
         elif angle > 35:
-            updated_angle = 45
+            updated_angle = 90
         else:
             updated_angle = 0
         
