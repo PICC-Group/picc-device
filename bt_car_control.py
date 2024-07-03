@@ -13,6 +13,7 @@ class BTSender:
     ):
         self.device_name = device_name
         self.max_motor_speed = max_motor_speed
+        self.min_motor_speed = min_motor_speed
         self.SERVICE_UUID = SERVICE_UUID
         self.CHARACTERISTIC_UUID = CHARACTERISTIC_UUID
         self.client = None
