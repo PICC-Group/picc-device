@@ -47,9 +47,9 @@ class BTSender:
     async def update_speed(self, angle, throttle):
         updated_angle = 0
         updated_throttle = throttle
-        if angle < -22.5:
+        if angle < -35:
             updated_angle = -45
-        elif angle > 22.5:
+        elif angle > 35:
             updated_angle = 45
         else:
             updated_angle = 0
