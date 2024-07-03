@@ -64,7 +64,7 @@ class BTSender:
 
         if self.client and self.client.is_connected:
             left_speed, right_speed = self.angle_throttle_to_motor_speeds(
-                angle, throttle
+                updated_angle, updated_throttle
             )
             assert (
                 left_speed <= self.max_motor_speed
