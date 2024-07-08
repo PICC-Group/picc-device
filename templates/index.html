@@ -32,22 +32,26 @@
                     <circle cx="50" cy="50" r="40" stroke="white" stroke-width="3" fill="none" />
                     <line x1="50" y1="50" x2="50" y2="20" stroke="red" stroke-width="3" />
                 </svg>
+                <p id="angle">0</p>
                 <div class="controls">
-                    <input id="input1" class="control-item" type="text" placeholder="Input 1">
-                    <input id="input2" class="control-item" type="text" placeholder="Input 2">
-                    <button class="control-item" onclick="sendData('button1')">Button 1</button>
+                    <input id="angleMin" class="control-item" type="text" placeholder="Steering Angle Min">
+                    <input id="angleMax" class="control-item" type="text" placeholder="Steering Angle Max">
+                    <button class="control-item" onclick="sendData('updateAngleButton')">Update values</button>
                     <button class="control-item" onclick="sendData('button2')">Button 2</button>
                 </div>
             </div>
             <div class="data-box">
                 <h2>Speedometer (Throttle)</h2>
+                <svg id="speedometer" width="100" height="100" viewbox="0 0 100 100">
+                    <rect id="speedBar" x="25" y="90" width="50" height="0" fill="blue"></rect>
+                    <rect x="25" y="10" width="50" height="80" fill="none" stroke="white" stroke-width="3"></rect>
+                </svg>
                 <p id="throttle">0</p>
                 <div class="controls">
-                    <input id="input3" class="control-item" type="text" placeholder="Input 3">
-                    <input id="input4" class="control-item" type="text" placeholder="Input 4">
-                    <button class="control-item" onclick="sendData('button3')">Button 3</button>
+                    <input id="speedMin" class="control-item" type="text" placeholder="Speed Min">
+                    <input id="speedMax" class="control-item" type="text" placeholder="Speed Max">
+                    <button class="control-item" onclick="sendData('updateSpeedButton')">Update values</button>
                     <button class="control-item" onclick="sendData('button4')">Button 4</button>
-                    <button class="control-item" onclick="sendData('button5')">Button 5</button>
                 </div>
             </div>
         </div>
@@ -76,8 +80,36 @@
 
         const angleData = { labels: [], datasets: [{ label: 'Angle', data: [], borderColor: 'red', fill: false }] };
         const throttleData = { labels: [], datasets: [{ label: 'Throttle', data: [], borderColor: 'blue', fill: false }] };
-        const configAngle = { type: 'line', data: angleData, options: { scales: { y: { beginAtZero: true } } } };
-        const configThrottle = { type: 'line', data: throttleData, options: { scales: { y: { beginAtZero: true } } } };
+        const configAngle = {
+            type: 'line',
+            data: angleData,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        suggestedMin: -180,  // Set minimum limit
+                        suggestedMax: 180    // Set maximum limit
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        };
+        const configThrottle = {
+            type: 'line',
+            data: throttleData,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        suggestedMin: 0,    // Set minimum limit
+                        suggestedMax: 1   // Set maximum limit
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        };
         const angleChart = new Chart(document.getElementById('angleChart').getContext('2d'), configAngle);
         const throttleChart = new Chart(document.getElementById('throttleChart').getContext('2d'), configThrottle);
 
@@ -103,8 +135,14 @@
             fetch('/data')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('throttle').innerText = data.throttle * 100 + '%';
+                    const roundedSpeedPercent = (data.throttle * 100).toFixed(2);  // Round to two decimal places
+                    document.getElementById('throttle').innerText = roundedSpeedPercent + '%';
+                    document.getElementById('angle').innerText = data.angle + ' deg';
                     document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
+                    const speedPercent = data.throttle;
+                    const speedBarHeight = speedPercent * 80;  // 80 is the total height of the outline rect
+                    document.getElementById('speedBar').setAttribute('y', 90 - speedBarHeight); // 90 is the base y-coordinate
+                    document.getElementById('speedBar').setAttribute('height', speedBarHeight);
                     updateCharts(data.angle, data.throttle);
                     if (showOutputDataLogs) {
                         logMessage(`Fetched data - Angle: ${data.angle}, Throttle: ${data.throttle}`);
@@ -118,12 +156,13 @@
                 });
         }
 
+
         function sendData(buttonId) {
             const data = {
-                input1: document.getElementById('input1').value,
-                input2: document.getElementById('input2').value,
-                input3: document.getElementById('input3').value,
-                input4: document.getElementById('input4').value,
+                angleMin: document.getElementById('angleMin').value,
+                angleMax: document.getElementById('angleMax').value,
+                speedMin: document.getElementById('speedMin').value,
+                speedMax: document.getElementById('speedMax').value,
                 button: buttonId
             };
             fetch('/receive_data', {
