@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #333; color: white; text-align: center; }
         .container { padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -15,6 +16,10 @@
         #wheel { transform-origin: center; transition: transform 0.5s; }
         .controls { display: flex; justify-content: space-between; width: 100%; }
         .control-item { margin: 5px; }
+        .terminal-box { width: 80%; height: 150px; background: #222; overflow-y: auto; padding: 10px; margin-top: 20px; }
+        .log-message { margin: 0; padding: 0; font-size: 12px; }
+        .toggle-container { display: flex; align-items: center; margin-top: 10px; }
+        .toggle-container label { margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -54,9 +59,21 @@
                 <canvas id="throttleChart"></canvas>
             </div>
         </div>
+        <div id="terminal" class="terminal-box"></div>
+        <div class="toggle-container">
+            <label for="toggle-logs">Show Data Logs</label>
+            <input type="checkbox" id="toggle-logs" onclick="toggleLogs()">
+        </div>
     </div>
     
     <script>
+        const socket = io.connect('http://127.0.0.1:5000');
+        let showOutputDataLogs = false;
+
+        socket.on('log_message', function(data) {
+            logMessage(data.message);
+        });
+
         const angleData = { labels: [], datasets: [{ label: 'Angle', data: [], borderColor: 'red', fill: false }] };
         const throttleData = { labels: [], datasets: [{ label: 'Throttle', data: [], borderColor: 'blue', fill: false }] };
         const configAngle = { type: 'line', data: angleData, options: { scales: { y: { beginAtZero: true } } } };
@@ -89,8 +106,16 @@
                     document.getElementById('throttle').innerText = data.throttle * 100 + '%';
                     document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
                     updateCharts(data.angle, data.throttle);
+                    if (showOutputDataLogs) {
+                        logMessage(`Fetched data - Angle: ${data.angle}, Throttle: ${data.throttle}`);
+                    }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (showOutputDataLogs){
+                        logMessage(`Error fetching data: ${error}`);
+                    }
+                });
         }
 
         function sendData(buttonId) {
@@ -107,8 +132,27 @@
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
-            .then(data => console.log('Success:', data))
-            .catch(error => console.error('Error:', error));
+            .then(data => {
+                console.log('Success:', data);
+                logMessage(`Sent data from ${buttonId} - Response: ${JSON.stringify(data)}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                logMessage(`Error sending data from ${buttonId}: ${error}`);
+            });
+        }
+
+        function logMessage(message) {
+            const terminal = document.getElementById('terminal');
+            const newMessage = document.createElement('p');
+            newMessage.className = 'log-message';
+            newMessage.innerText = new Date().toLocaleTimeString() + ': ' + message;
+            terminal.appendChild(newMessage);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function toggleLogs() {
+            showOutputDataLogs = document.getElementById('toggle-logs').checked;
         }
 
         // Update data every 500ms

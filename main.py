@@ -6,8 +6,9 @@ from flask import Flask, render_template, jsonify, request
 from bt_car_control import BTSender
 import time
 import asyncio
+from flask_socketio import SocketIO, emit
 
-DATA_FILE = False#"../save_plate.csv"
+DATA_FILE = "../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
 VERBOSE = False
 PROCESS_SLEEP_TIME = 0.0001
@@ -15,6 +16,7 @@ CAR_DEVICE_NAME = "BT05-BLE"  # Replace with your car's Bluetooth device name
 
 # Flask application setup
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 latest_data = {"angle": 1, "throttle": 1}  # Initialize with default values
 received_data = {}  # Dictionary to store received data
@@ -39,11 +41,11 @@ def receive_data():
     global received_data
     data = request.get_json()
     received_data = data
-    print("Received data from web:", received_data)
+    log_message(f"Received data from web: {received_data}")
     return jsonify({"status": "success", "data": received_data})
 
 def run_flask():
-    app.run(host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
 # NanoVNA Setup
 data_source = pynanovna.NanoVNAWorker(verbose=VERBOSE)
@@ -75,19 +77,24 @@ async def main_loop():
             response = requests.post("http://127.0.0.1:5000/update_data", json=send_data)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            print(f"Error sending data to server: {e}")
+            log_message(f"Error sending data to server: {e}")
         
         # Send the data to the RC car
         if not bt_sender.is_connected():
-            print("Car not connected!")
-            print("Trying to connect car...")
+            log_message("Car not connected!")
+            log_message("Trying to connect car...")
             await bt_sender.connect()
             time.sleep(5)
             
         await bt_sender.update_speed(angle, throttle)
         
-        print("Still in loop", received_data)
+        log_message(f"Still in loop: {received_data}")
         time.sleep(1)
+
+def log_message(message):
+    """Send log message to connected clients."""
+    socketio.emit('log_message', {'message': message})
+    print(message)
 
 # Run the main loop
 asyncio.run(main_loop())
