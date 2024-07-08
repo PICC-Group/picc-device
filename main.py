@@ -89,12 +89,45 @@ async def main_loop():
         await bt_sender.update_speed(angle, throttle)
         
         log_message(f"Still in loop: {received_data}")
+        handle_received_data(received_data, bt_sender)
         time.sleep(1)
 
 def log_message(message):
     """Send log message to connected clients."""
     socketio.emit('log_message', {'message': message})
     print(message)
+
+def handle_received_data(received_data, bt_sender):
+    if received_data == {}:
+        log_message("Received data seems to be empty! This is not good.")
+        return
+
+    if received_data["button"] == "updateAngleButton":
+        try:
+            min_threshold = int(received_data["angleThresholdMin"])
+            max_threshold = int(received_data["angleThresholdMax"])
+            max_angle = int(received_data["angleMax"])
+            if min_threshold != 0:
+                bt_sender.angle_min_threshold = min_threshold
+            if max_threshold != 0:
+                bt_sender.angle_max_threshold = max_threshold
+            if max_angle != 0:
+                bt_sender.max_steering_angle = max_angle
+            log_message("Updating car angle thresholds.")
+        except ValueError:
+            log_message("Could not update the car angle thresholds, are they valid?")
+
+    elif received_data["button"] == "updateSpeedButton":
+        try:
+            min_speed = int(received_data["speedMin"])
+            max_speed = int(received_data["speedMax"])
+            if min_threshold != 0:
+                bt_sender.min_motor_speed= min_speed
+            if max_threshold != 0:
+                bt_sender.max_motor_speed = max_speed
+            log_message("Updating car speed thresholds.")
+        except ValueError:
+            log_message("Could not update the car speed thresholds, are they valid?")
 
 # Run the main loop
 asyncio.run(main_loop())

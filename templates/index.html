@@ -34,10 +34,10 @@
                 </svg>
                 <p id="angle">0</p>
                 <div class="controls">
-                    <input id="angleMin" class="control-item" type="text" placeholder="Steering Angle Min">
+                    <input id="angleThresholdMin" class="control-item" type="text" placeholder="Steering Threshold Min">
+                    <input id="angleThresholdMax" class="control-item" type="text" placeholder="Steering Threshold Max">
                     <input id="angleMax" class="control-item" type="text" placeholder="Steering Angle Max">
                     <button class="control-item" onclick="sendData('updateAngleButton')">Update values</button>
-                    <button class="control-item" onclick="sendData('button2')">Button 2</button>
                 </div>
             </div>
             <div class="data-box">
@@ -51,9 +51,12 @@
                     <input id="speedMin" class="control-item" type="text" placeholder="Speed Min">
                     <input id="speedMax" class="control-item" type="text" placeholder="Speed Max">
                     <button class="control-item" onclick="sendData('updateSpeedButton')">Update values</button>
-                    <button class="control-item" onclick="sendData('button4')">Button 4</button>
                 </div>
             </div>
+        </div>
+        <div class="data-box">
+            <button class="control-item" onclick="sendData('rebootButton')">Reboot System</button>
+            <button class="control-item" onclick="sendData('shutdownButton')">Shut System Down</button>
         </div>
         <div class="charts-container">
             <div class="chart-box">
@@ -87,8 +90,8 @@
                 scales: {
                     y: {
                         beginAtZero: false,
-                        suggestedMin: -180,  // Set minimum limit
-                        suggestedMax: 180    // Set maximum limit
+                        suggestedMin: -180,
+                        suggestedMax: 180
                     }
                 },
                 responsive: true,
@@ -102,8 +105,8 @@
                 scales: {
                     y: {
                         beginAtZero: false,
-                        suggestedMin: 0,    // Set minimum limit
-                        suggestedMax: 1   // Set maximum limit
+                        suggestedMin: 0,
+                        suggestedMax: 1
                     }
                 },
                 responsive: true,
@@ -159,7 +162,8 @@
 
         function sendData(buttonId) {
             const data = {
-                angleMin: document.getElementById('angleMin').value,
+                angleThresholdMin: document.getElementById('angleThresholdMin').value,
+                angleThresholdMax: document.getElementById('angleThresholdMax').value,
                 angleMax: document.getElementById('angleMax').value,
                 speedMin: document.getElementById('speedMin').value,
                 speedMax: document.getElementById('speedMax').value,

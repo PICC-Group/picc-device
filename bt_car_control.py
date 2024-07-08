@@ -10,10 +10,16 @@ class BTSender:
         CHARACTERISTIC_UUID="FFE1",
         max_motor_speed=255,
         min_motor_speed=20,
+        angle_min_threshold=-35,
+        angle_max_threshold=35,
+        max_steering_angle=45
     ):
         self.device_name = device_name
         self.max_motor_speed = max_motor_speed
         self.min_motor_speed = min_motor_speed
+        self.angle_min_threshold = angle_min_threshold
+        self.angle_max_threshold = angle_max_threshold
+        self.max_steering_angle = max_steering_angle
         self.SERVICE_UUID = SERVICE_UUID
         self.CHARACTERISTIC_UUID = CHARACTERISTIC_UUID
         self.client = None
@@ -52,13 +58,12 @@ class BTSender:
     async def update_speed(self, angle, throttle):
         updated_angle = 0
         updated_throttle = throttle
-        if angle < -35:
-            updated_angle = -45
-        elif angle > 35:
-            updated_angle = 45
+        if angle < self.angle_min_threshold:
+            updated_angle = -self.max_steering_angle
+        elif angle > self.angle_max_threshold:
+            updated_angle = self.max_steering_angle
         else:
             updated_angle = 0
-        
 
         if self.client and self.client.is_connected:
             left_speed, right_speed = self.angle_throttle_to_motor_speeds(
