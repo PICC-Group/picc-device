@@ -22,22 +22,33 @@ class SignalProcessing:
         process_sleep_time=0.0001,
         smoothing_points: int = 5,
         verbose=False,
+        interactive_mode=False
     ):
         self.stream = data_stream  # The stream from which to process data
         self.process_sleep_time = process_sleep_time
         self.smoothing_points = smoothing_points
         self.verbose = verbose
+        self.interactive_mode = interactive_mode
         self.norm = None
         self.ref_angle_data = None
         self.ref_throttle_data = None
         self.alpha = None
-        self.setup()
+        self.reference_step_data = [None] * 5
+        self.reference_setup_done = False
+        if interactive_mode:
+            self.setup(interactive_mode)
+        if verbose:
+            print(f"If not in interactive mode, run the functions reference_step0, reference_step_n (1to4) and setup manually. \nInteractive mode: {interactive_mode}")
 
     def process_data_continuously(self):
         for s11, s21 in self.stream:
+            if not self.reference_setup_done:
+                if self.verbose:
+                    print("No reference values has been taken.")
+                yield (0, 0)
+                continue
             angle = self.get_angle(s11, s21, self.ref_angle_data, self.ref_throttle_data, self.alpha) * 90 - 45
             throttle = self.get_throttle(s11, s21, self.ref_throttle_data, self.alpha)
-            print(angle)
             if self.verbose:
                 print(f"Processed phase: {angle}, direction: {throttle}")
             sleep(self.process_sleep_time)
@@ -140,55 +151,56 @@ class SignalProcessing:
         ## Make data (i.e tuple of list of datapoints) into a tuple of numpy arrays of complex values
         return np.array([[p.z for p in data[0]], [p.z for p in data[1]]])
 
-    def setup(self):
-        i = 0
-        while True:
-            match i:
-                case 0:
-                    input(
-                        "Taking empty refernce, make sure the space infront of the antenna is clear. Press Enter to continue."
-                    )
-                    r_data = self.get_new_data()
-                    self.norm = self.data_to_np(r_data)
-                case 1:
-                    input(
-                        "Put strip grid at 2cm distance at minimum angle. Press Enter to continue."
-                    )
-                    mindist_minangle = self.get_new_data()
-                case 2:
-                    input(
-                        "Put strip grid at 2cm distance at maximum angle (45 degrees). Press Enter to continue."
-                    )
-                    mindist_maxangle = self.get_new_data()
-                case 3:
-                    input(
-                        "Put strip grid at 10cm distance at minimum angle. Press Enter to continue."
-                    )
-                    maxdist_minangle = self.get_new_data()
-                case 4:
-                    input(
-                        "Put strip grid at 10cm distance at maximum angle (45 degrees). Press Enter to continue."
-                    )
-                    maxdist_maxangle = self.get_new_data()
-                    print(mindist_maxangle == mindist_minangle)
-            if i > 5:
-                break
-            i += 1
+    def reference_step0(self):
+        self.reference_setup_done = False
+        self.reference_step_data = [None] * 5
+        self.reference_step_data[0] = self.get_new_data()
+        self.norm = self.data_to_np(self.reference_step_data[0])
+
+    def reference_step_n(self, n):
+        if 1 <= n <= 4:  # Ensure n is within the expected range
+            self.reference_step_data[n] = self.get_new_data()
+        else:
+            raise ValueError("Step number must be between 1 and 4.")
+
+    def setup(self, interactive=True):
+        descriptions = [
+            "Taking empty reference, make sure the space in front of the antenna is clear.",
+            "Put strip grid at 2cm distance at minimum angle.",
+            "Put strip grid at 2cm distance at maximum angle (45 degrees).",
+            "Put strip grid at 10cm distance at minimum angle.",
+            "Put strip grid at 10cm distance at maximum angle (45 degrees)."
+        ]
+
+        if interactive:
+            for i in range(5):
+                input(f"{descriptions[i]} Press Enter to continue.")
+                if i == 0:
+                    self.reference_step0()
+                else:
+                    self.reference_step_n(i)
+
+        # Process the data only after all steps have been completed
+        if not interactive or all(result is not None for result in self.reference_step_data):
+            self.process_reference_data()
+            self.reference_setup_done = True
+
+    def process_reference_data(self):
+        mindist_minangle, mindist_maxangle, maxdist_minangle, maxdist_maxangle = self.reference_step_data[1:]
 
         s21max1 = np.average(np.abs(self.data_to_np(mindist_maxangle)[1]))
         s21max2 = np.average(np.abs(self.data_to_np(maxdist_maxangle)[1]))
         s11max1 = np.average(np.abs(self.data_to_np(mindist_minangle)[0]))
         s11max2 = np.average(np.abs(self.data_to_np(maxdist_minangle)[0]))
-        if self.verbose:
-            print(s11max1, s11max2)
 
-        self.alpha = np.sqrt(
-            (s11max1 / s21max1 + s11max2 / s21max2) / 2
-        )  # Determine how much larger s11 is than s21
         if self.verbose:
-            print(self.alpha)
+            print(f"s11max1: {s11max1}, s11max2: {s11max2}")
 
-        # [angle min at min distance, angle max at min distance, anlge min at max distance, angle max at max distance]
+        self.alpha = np.sqrt((s11max1 / s21max1 + s11max2 / s21max2) / 2)
+
+        if self.verbose:
+            print(f"Alpha: {self.alpha}")
+
         self.ref_angle_data = [
             self.get_angle(*self.data_to_np(mindist_minangle)),
             self.get_angle(*self.data_to_np(mindist_maxangle)),
@@ -196,22 +208,15 @@ class SignalProcessing:
             self.get_angle(*self.data_to_np(maxdist_maxangle)),
         ]
 
-        # [average throttle at min distance, average throttle at max distance]
         self.ref_throttle_data = [
-            (
-                self.get_throttle(*self.data_to_np(mindist_minangle))
-                + self.get_throttle(*self.data_to_np(mindist_minangle))
-            )
-            / 2,
-            (
-                self.get_throttle(*self.data_to_np(maxdist_minangle))
-                + self.get_throttle(*self.data_to_np(maxdist_maxangle))
-            )
-            / 2,
+            (self.get_throttle(*self.data_to_np(mindist_minangle))
+             + self.get_throttle(*self.data_to_np(mindist_minangle))) / 2,
+            (self.get_throttle(*self.data_to_np(maxdist_minangle))
+             + self.get_throttle(*self.data_to_np(maxdist_maxangle))) / 2,
         ]
 
         if self.verbose:
-            print(self.ref_angle_data, self.ref_throttle_data, self.alpha)
+            print(f"Angle data: {self.ref_angle_data}, Throttle data: {self.ref_throttle_data}, Alpha: {self.alpha}")
 
     async def _mean_smoothing(self):
         ########### THIS NEEDS TO BE REWRITTEN TO NOT USE QUEUE ######################

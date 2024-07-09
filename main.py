@@ -11,7 +11,7 @@ import subprocess
 
 DATA_FILE = "../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
-VERBOSE = False
+VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
 CAR_DEVICE_NAME = "BT05-BLE"  # Replace with your car's Bluetooth device name
 
@@ -42,11 +42,15 @@ def receive_data():
     global received_data
     data = request.get_json()
     received_data = data
-    log_message(f"Received data from web: {received_data}")
     return jsonify({"status": "success", "data": received_data})
 
 def run_flask():
     socketio.run(app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+
+
+# Start Flask in a separate thread
+flask_thread = threading.Thread(target=run_flask)
+flask_thread.start()
 
 # NanoVNA Setup
 data_source = pynanovna.NanoVNAWorker(verbose=VERBOSE)
@@ -58,50 +62,47 @@ signal_processing = SignalProcessing(
     data_stream,
     process_sleep_time=PROCESS_SLEEP_TIME,
     verbose=VERBOSE,
+    interactive_mode=False
 )
-
-# Start Flask in a separate thread
-flask_thread = threading.Thread(target=run_flask)
-flask_thread.start()
 
 # Instantiate the BTSender class
 bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 
 async def main_loop():
-    await bt_sender.connect()
-    data_processor = signal_processing.process_data_continuously()
-    
-    for angle, throttle in data_processor:
-        send_data = {'angle': angle, 'throttle': throttle}
-        latest_data = send_data.copy()
-        try:
-            response = requests.post("http://127.0.0.1:5000/update_data", json=send_data)
-            response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            log_message(f"Error sending data to server: {e}")
-        
-        # Send the data to the RC car
-        if not bt_sender.is_connected():
-            log_message("Car not connected!")
-            log_message("Trying to connect car...")
-            await bt_sender.connect()
-            time.sleep(5)
+    while True:
+        await bt_sender.connect()
+        data_processor = signal_processing.process_data_continuously()
+        update_processor = False
+
+        for angle, throttle in data_processor:
+            send_data = {'angle': angle, 'throttle': throttle}
+            latest_data = send_data.copy()
+
+            try:
+                response = requests.post("http://127.0.0.1:5000/update_data", json=send_data)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                log_message(f"Error sending data to server: {e}")
             
-        await bt_sender.update_speed(angle, throttle)
-        
-        log_message(f"Still in loop: {received_data}")
-        handle_received_data(received_data, bt_sender)
-        time.sleep(1)
+            # Send the data to the RC car        
+            await bt_sender.update_speed(angle, throttle)
+
+            # Handle any received data and then reset it
+            update_processor = await handle_received_data(received_data, bt_sender, signal_processing)
+            received_data.clear()  # Reset received_data to an empty dictionary after handling
+            if update_processor:
+                break
+
+            time.sleep(1) # Uncomment this row if running from prerecorded file.
 
 def log_message(message):
     """Send log message to connected clients."""
     socketio.emit('log_message', {'message': message})
     print(message)
 
-def handle_received_data(received_data, bt_sender):
+async def handle_received_data(received_data, bt_sender, signal_processing):
     if received_data == {}:
-        log_message("Received data seems to be empty! This is not good.")
-        return
+        return False
 
     if received_data["button"] == "updateAngleButton":
         try:
@@ -134,6 +135,28 @@ def handle_received_data(received_data, bt_sender):
     elif received_data["button"] == "shutdownButton":
         log_message("Shutting down the system. Goodbye.")
         subprocess.run(['sudo', 'shutdown', 'now'], check=True)
+    elif received_data["button"] == "connectCar":
+        log_message("Trying to connect to the car.")
+        if not bt_sender.is_connected():
+            log_message("Car not connected!")
+            log_message("Trying to connect car...")
+            await bt_sender.connect()
+    elif received_data["button"] == "refMeasure0":
+        log_message("Running reference measure CLEAR.")
+        signal_processing.reference_step0()
+    elif received_data["button"] == "refMeasureSetup":
+        log_message("Running reference setup.")
+        signal_processing.setup(False)
+        time.sleep(1)
+        return True #  Makes the for loop restart with a new processor.
+    elif "refMeasure" in received_data["button"]:
+        stepno = int(received_data["button"][-1])
+        log_message(f"Running reference measure step {stepno}.")
+        signal_processing.reference_step_n(stepno)
+
+    time.sleep(1)
+    log_message("Done.")
+    return False
 
 # Run the main loop
 asyncio.run(main_loop())

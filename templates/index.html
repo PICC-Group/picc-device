@@ -57,6 +57,7 @@
         <div class="data-box">
             <button class="control-item" onclick="sendData('rebootButton')">Reboot System</button>
             <button class="control-item" onclick="sendData('shutdownButton')">Shut System Down</button>
+            <button class="control-item" onclick="sendData('connectCar')">Connect to Car</button>
         </div>
         <div class="charts-container">
             <div class="chart-box">
@@ -65,6 +66,15 @@
             <div class="chart-box">
                 <canvas id="throttleChart"></canvas>
             </div>
+        </div>
+        <div class="data-box">
+            <h3>Reference Measurements</h3>
+            <button class="control-item" onclick="sendData('refMeasure0')">CLEAR</button>
+            <button class="control-item" onclick="sendData('refMeasure1')">Minimum distance, minimum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasure2')">Minimum distance, maximum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasure3')">Maximum distance, minimum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasure4')">Maximum distance, maximum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasureSetup')">Done</button>
         </div>
         <div id="terminal" class="terminal-box"></div>
         <div class="toggle-container">
@@ -177,7 +187,6 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Success:', data);
-                logMessage(`Sent data from ${buttonId} - Response: ${JSON.stringify(data)}`);
             })
             .catch(error => {
                 console.error('Error:', error);
