@@ -7,6 +7,7 @@ from bt_car_control import BTSender
 import time
 import asyncio
 from flask_socketio import SocketIO, emit
+import subprocess
 
 DATA_FILE = "../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
@@ -116,7 +117,6 @@ def handle_received_data(received_data, bt_sender):
             log_message("Updating car angle thresholds.")
         except ValueError:
             log_message("Could not update the car angle thresholds, are they valid?")
-
     elif received_data["button"] == "updateSpeedButton":
         try:
             min_speed = int(received_data["speedMin"])
@@ -128,6 +128,12 @@ def handle_received_data(received_data, bt_sender):
             log_message("Updating car speed thresholds.")
         except ValueError:
             log_message("Could not update the car speed thresholds, are they valid?")
+    elif received_data["button"] == "rebootButton":
+        log_message("Rebooting the system.")
+        subprocess.run(['sudo', 'reboot', 'now'], check=True)
+    elif received_data["button"] == "shutdownButton":
+        log_message("Shutting down the system. Goodbye.")
+        subprocess.run(['sudo', 'shutdown', 'now'], check=True)
 
 # Run the main loop
 asyncio.run(main_loop())
