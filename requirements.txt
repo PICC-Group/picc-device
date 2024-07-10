@@ -1,6 +1,7 @@
-bleak==0.22.1
+bleak==0.22.2
 Flask==3.0.3
-numpy==1.26.4
+Flask_SocketIO==5.3.6
+numpy==2.0.0
 pynanovna==0.0.7
-Requests==2.31.0
-scipy==1.13.0
+Requests==2.32.3
+scipy==1.14.0

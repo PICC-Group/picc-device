@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #333; color: white; text-align: center; }
         .container { padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -15,6 +16,10 @@
         #wheel { transform-origin: center; transition: transform 0.5s; }
         .controls { display: flex; justify-content: space-between; width: 100%; }
         .control-item { margin: 5px; }
+        .terminal-box { width: 80%; height: 150px; background: #222; overflow-y: auto; padding: 10px; margin-top: 20px; }
+        .log-message { margin: 0; padding: 0; font-size: 12px; }
+        .toggle-container { display: flex; align-items: center; margin-top: 10px; }
+        .toggle-container label { margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -27,24 +32,34 @@
                     <circle cx="50" cy="50" r="40" stroke="white" stroke-width="3" fill="none" />
                     <line x1="50" y1="50" x2="50" y2="20" stroke="red" stroke-width="3" />
                 </svg>
+                <p id="angle">0</p>
                 <div class="controls">
-                    <input id="input1" class="control-item" type="text" placeholder="Input 1">
-                    <input id="input2" class="control-item" type="text" placeholder="Input 2">
-                    <button class="control-item" onclick="sendData('button1')">Button 1</button>
-                    <button class="control-item" onclick="sendData('button2')">Button 2</button>
+                    <input id="angleThresholdMin" class="control-item" type="text" placeholder="Steering Threshold Min">
+                    <input id="angleThresholdMax" class="control-item" type="text" placeholder="Steering Threshold Max">
+                    <input id="angleMax" class="control-item" type="text" placeholder="Steering Angle Max">
+                    <button class="control-item" onclick="sendData('updateAngleButton')">Update values</button>
                 </div>
             </div>
             <div class="data-box">
                 <h2>Speedometer (Throttle)</h2>
+                <svg id="speedometer" width="100" height="100" viewbox="0 0 100 100">
+                    <rect id="speedBar" x="25" y="90" width="50" height="0" fill="blue"></rect>
+                    <rect x="25" y="10" width="50" height="80" fill="none" stroke="white" stroke-width="3"></rect>
+                </svg>
                 <p id="throttle">0</p>
                 <div class="controls">
-                    <input id="input3" class="control-item" type="text" placeholder="Input 3">
-                    <input id="input4" class="control-item" type="text" placeholder="Input 4">
-                    <button class="control-item" onclick="sendData('button3')">Button 3</button>
-                    <button class="control-item" onclick="sendData('button4')">Button 4</button>
-                    <button class="control-item" onclick="sendData('button5')">Button 5</button>
+                    <input id="speedMin" class="control-item" type="text" placeholder="Speed Min">
+                    <input id="speedMax" class="control-item" type="text" placeholder="Speed Max">
+                    <button class="control-item" onclick="sendData('updateSpeedButton')">Update values</button>
                 </div>
             </div>
+        </div>
+        <div class="data-box">
+            <button class="control-item" onclick="sendData('rebootButton')">Reboot System</button>
+            <button class="control-item" onclick="sendData('shutdownButton')">Shut System Down</button>
+            <button class="control-item" onclick="sendData('connectCar')">Connect to Car</button>
+            <input id="calibrationFile" class="control-item" type="text" placeholder="Calibration file path">
+            <button class="control-item" onclick="sendData('updateCalibrationFile')">Update calibration file</button>
         </div>
         <div class="charts-container">
             <div class="chart-box">
@@ -54,13 +69,62 @@
                 <canvas id="throttleChart"></canvas>
             </div>
         </div>
+        <div class="data-box">
+            <h3>Reference Measurements</h3>
+            <button class="control-item" onclick="sendData('refMeasure0')">CLEAR</button>
+            <button class="control-item" onclick="sendData('refMeasure1')">Minimum distance, minimum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasure2')">Minimum distance, maximum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasure3')">Maximum distance, minimum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasure4')">Maximum distance, maximum Angle</button>
+            <button class="control-item" onclick="sendData('refMeasureSetup')">Done</button>
+        </div>
+        <div id="terminal" class="terminal-box"></div>
+        <div class="toggle-container">
+            <label for="toggle-logs">Show Data Logs</label>
+            <input type="checkbox" id="toggle-logs" onclick="toggleLogs()">
+        </div>
     </div>
     
     <script>
+        const socket = io.connect('http://127.0.0.1:5000');
+        let showOutputDataLogs = false;
+
+        socket.on('log_message', function(data) {
+            logMessage(data.message);
+        });
+
         const angleData = { labels: [], datasets: [{ label: 'Angle', data: [], borderColor: 'red', fill: false }] };
         const throttleData = { labels: [], datasets: [{ label: 'Throttle', data: [], borderColor: 'blue', fill: false }] };
-        const configAngle = { type: 'line', data: angleData, options: { scales: { y: { beginAtZero: true } } } };
-        const configThrottle = { type: 'line', data: throttleData, options: { scales: { y: { beginAtZero: true } } } };
+        const configAngle = {
+            type: 'line',
+            data: angleData,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        suggestedMin: -180,
+                        suggestedMax: 180
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        };
+        const configThrottle = {
+            type: 'line',
+            data: throttleData,
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        suggestedMin: 0,
+                        suggestedMax: 1
+                    }
+                },
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        };
         const angleChart = new Chart(document.getElementById('angleChart').getContext('2d'), configAngle);
         const throttleChart = new Chart(document.getElementById('throttleChart').getContext('2d'), configThrottle);
 
@@ -86,19 +150,36 @@
             fetch('/data')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('throttle').innerText = data.throttle * 100 + '%';
+                    const roundedSpeedPercent = (data.throttle * 100).toFixed(2);  // Round to two decimal places
+                    document.getElementById('throttle').innerText = roundedSpeedPercent + '%';
+                    document.getElementById('angle').innerText = data.angle + ' deg';
                     document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
+                    const speedPercent = data.throttle;
+                    const speedBarHeight = speedPercent * 80;  // 80 is the total height of the outline rect
+                    document.getElementById('speedBar').setAttribute('y', 90 - speedBarHeight); // 90 is the base y-coordinate
+                    document.getElementById('speedBar').setAttribute('height', speedBarHeight);
                     updateCharts(data.angle, data.throttle);
+                    if (showOutputDataLogs) {
+                        logMessage(`Fetched data - Angle: ${data.angle}, Throttle: ${data.throttle}`);
+                    }
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (showOutputDataLogs){
+                        logMessage(`Error fetching data: ${error}`);
+                    }
+                });
         }
+
 
         function sendData(buttonId) {
             const data = {
-                input1: document.getElementById('input1').value,
-                input2: document.getElementById('input2').value,
-                input3: document.getElementById('input3').value,
-                input4: document.getElementById('input4').value,
+                angleThresholdMin: document.getElementById('angleThresholdMin').value,
+                angleThresholdMax: document.getElementById('angleThresholdMax').value,
+                angleMax: document.getElementById('angleMax').value,
+                speedMin: document.getElementById('speedMin').value,
+                speedMax: document.getElementById('speedMax').value,
+                calibrationFile: document.getElementById('calibrationFile').value,
                 button: buttonId
             };
             fetch('/receive_data', {
@@ -107,8 +188,26 @@
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
-            .then(data => console.log('Success:', data))
-            .catch(error => console.error('Error:', error));
+            .then(data => {
+                console.log('Success:', data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                logMessage(`Error sending data from ${buttonId}: ${error}`);
+            });
+        }
+
+        function logMessage(message) {
+            const terminal = document.getElementById('terminal');
+            const newMessage = document.createElement('p');
+            newMessage.className = 'log-message';
+            newMessage.innerText = new Date().toLocaleTimeString() + ': ' + message;
+            terminal.appendChild(newMessage);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function toggleLogs() {
+            showOutputDataLogs = document.getElementById('toggle-logs').checked;
         }
 
         // Update data every 500ms
