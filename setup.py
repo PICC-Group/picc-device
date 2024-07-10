@@ -12,8 +12,8 @@ def create_service_file():
     After=network.target
 
     [Service]
-    ExecStart=/usr/bin/python3 /home/pi/main.py
-    WorkingDirectory=/home/pi
+    ExecStart=/usr/bin/python3 /home/picc/repos/picc-device/main.py
+    WorkingDirectory=/home/picc/repos/picc-device
     StandardOutput=inherit
     StandardError=inherit
     Restart=always
