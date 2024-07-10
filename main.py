@@ -11,7 +11,7 @@ import subprocess
 
 DATA_FILE = False#"../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
-VERBOSE = True
+VERBOSE = False
 PROCESS_SLEEP_TIME = 0.0001
 CAR_DEVICE_NAME = "BT05-BLE"  # Replace with your car's Bluetooth device name
 
