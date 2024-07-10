@@ -47,28 +47,31 @@ def receive_data():
 def run_flask():
     socketio.run(app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
 
+# NanoVNA Setup
+def setup_nanovna(verbose, calibration_file, data_file, process_sleep_time):
+    data_source = pynanovna.NanoVNAWorker(verbose=verbose)
+    data_source.calibrate(load_file=calibration_file)  # This needs to be done through a terminal atm.
+    data_source.set_sweep(2.9e9, 3.1e9, 1, 101)
+    data_stream = data_source.stream_data(data_file)
+
+    signal_processing = SignalProcessing(
+        data_stream,
+        process_sleep_time=process_sleep_time,
+        verbose=verbose,
+        interactive_mode=False
+    )
+    return signal_processing
+
 
 # Start Flask in a separate thread
 flask_thread = threading.Thread(target=run_flask)
 flask_thread.start()
 
-# NanoVNA Setup
-data_source = pynanovna.NanoVNAWorker(verbose=VERBOSE)
-data_source.calibrate(load_file=CALIBRATION_FILE)  # This needs to be done through a terminal atm.
-data_source.set_sweep(2.9e9, 3.1e9, 1, 101)
-data_stream = data_source.stream_data(DATA_FILE)
-
-signal_processing = SignalProcessing(
-    data_stream,
-    process_sleep_time=PROCESS_SLEEP_TIME,
-    verbose=VERBOSE,
-    interactive_mode=False
-)
-
 # Instantiate the BTSender class
 bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 
 async def main_loop():
+    signal_processing = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
     while True:
         await bt_sender.connect()
         data_processor = signal_processing.process_data_continuously()
@@ -94,6 +97,8 @@ async def main_loop():
                 break
 
             time.sleep(1) # Uncomment this row if running from prerecorded file.
+        if update_processor:
+            setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 
 def log_message(message):
     """Send log message to connected clients."""
@@ -153,6 +158,14 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         stepno = int(received_data["button"][-1])
         log_message(f"Running reference measure step {stepno}.")
         signal_processing.reference_step_n(stepno)
+    elif received_data["button"] == "updateCalibrationFile":
+        global CALIBRATION_FILE
+        log_message(f"Changing calibration file. Old file: {CALIBRATION_FILE}")
+        CALIBRATION_FILE = received_data["calibrationFile"]
+        log_message(f"Calibration file changed. New file: {CALIBRATION_FILE}")
+        time.sleep(1)
+        return False
+
 
     time.sleep(1)
     log_message("Done.")

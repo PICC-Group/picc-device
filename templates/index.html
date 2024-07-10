@@ -58,6 +58,8 @@
             <button class="control-item" onclick="sendData('rebootButton')">Reboot System</button>
             <button class="control-item" onclick="sendData('shutdownButton')">Shut System Down</button>
             <button class="control-item" onclick="sendData('connectCar')">Connect to Car</button>
+            <input id="calibrationFile" class="control-item" type="text" placeholder="Calibration file path">
+            <button class="control-item" onclick="sendData('updateCalibrationFile')">Update calibration file</button>
         </div>
         <div class="charts-container">
             <div class="chart-box">
@@ -177,6 +179,7 @@
                 angleMax: document.getElementById('angleMax').value,
                 speedMin: document.getElementById('speedMin').value,
                 speedMax: document.getElementById('speedMax').value,
+                calibrationFile: document.getElementById('calibrationFile').value,
                 button: buttonId
             };
             fetch('/receive_data', {
