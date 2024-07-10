@@ -22,10 +22,13 @@ def create_service_file():
     [Service]
     ExecStart={VENV_DIR}/bin/python /home/picc/repos/picc-device/main.py
     WorkingDirectory=/home/picc/repos/picc-device
-    StandardOutput=file:/var/log/main_script.log
-    StandardError=file:/var/log/main_script.log
+    StandardOutput=journal
+    StandardError=journal
     Restart=always
     User=picc
+    Group=picc
+    Environment="PATH={VENV_DIR}/bin"
+    Environment="PYTHONPATH={VENV_DIR}/lib/python3.11/site-packages"
 
     [Install]
     WantedBy=multi-user.target
