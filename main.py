@@ -96,7 +96,7 @@ async def main_loop():
             if update_processor:
                 break
 
-            #time.sleep(1) # Uncomment this row if running from prerecorded file.
+            time.sleep(1) # Uncomment this row if running from prerecorded file.
         if update_processor:
             setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 
