@@ -22,10 +22,10 @@ def create_service_file():
     [Service]
     ExecStart={VENV_DIR}/bin/python /home/picc/repos/picc-device/main.py
     WorkingDirectory=/home/picc/repos/picc-device
-    StandardOutput=inherit
-    StandardError=inherit
+    StandardOutput=file:/var/log/main_script.log
+    StandardError=file:/var/log/main_script.log
     Restart=always
-    User=pi
+    User=picc
 
     [Install]
     WantedBy=multi-user.target
