@@ -79,10 +79,10 @@ bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 async def main_loop():
     while True:
         signal_processing, vna = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
+        global received_data
 
         while not signal_processing.reference_setup_done:
             # Handle any received data and then reset it
-            global received_data
             await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
 
@@ -111,7 +111,6 @@ async def main_loop():
             log_messages.clear()
 
             # Handle any received data and then reset it
-            global received_data
             await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
 
