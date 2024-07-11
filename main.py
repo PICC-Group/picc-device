@@ -107,9 +107,9 @@ async def main_loop():
             if update_processor:
                 break
 
-            time.sleep(0.01) #  Increase sleep time to 1 if running a pre recorded file.
+            time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
         if update_processor:
-            setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
+            signal_processing = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 
 async def handle_received_data(received_data, bt_sender, signal_processing):
     if received_data == {}:
