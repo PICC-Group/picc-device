@@ -1,34 +1,23 @@
 import subprocess
 import sys
 import os
-import venv
 
-VENV_DIR = '/home/picc/repos/picc-device/venv'
-
-def create_virtual_environment():
-    if not os.path.exists(VENV_DIR):
-        venv.create(VENV_DIR, with_pip=True)
-
-def install_requirements():
-    pip_executable = os.path.join(VENV_DIR, 'bin', 'pip')
-    subprocess.check_call([pip_executable, "install", "-r", "requirements.txt"])
+# Install required packages from requirements.txt
+subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
 def create_service_file():
-    service_file_content = f"""
+    service_file_content = """
     [Unit]
     Description=Run main.py at startup
     After=network.target
 
     [Service]
-    ExecStart={VENV_DIR}/bin/python /home/picc/repos/picc-device/main.py
+    ExecStart=/usr/bin/python3 /home/picc/repos/picc-device/main.py
     WorkingDirectory=/home/picc/repos/picc-device
-    StandardOutput=journal
-    StandardError=journal
+    StandardOutput=inherit
+    StandardError=inherit
     Restart=always
-    User=picc
-    Group=picc
-    Environment="PATH={VENV_DIR}/bin"
-    Environment="PYTHONPATH={VENV_DIR}/lib/python3.11/site-packages"
+    User=pi
 
     [Install]
     WantedBy=multi-user.target
@@ -57,7 +46,5 @@ def add_startup_command():
 if os.geteuid() != 0:
     print("Please run the script as root.")
 else:
-    create_virtual_environment()
-    install_requirements()
     setup_service()
     add_startup_command()

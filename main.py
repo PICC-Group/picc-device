@@ -9,9 +9,9 @@ import asyncio
 from flask_socketio import SocketIO, emit
 import subprocess
 
-DATA_FILE = False#"../save_plate.csv"
+DATA_FILE = "../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
-VERBOSE = False
+VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
 CAR_DEVICE_NAME = "BT05-BLE"  # Replace with your car's Bluetooth device name
 
