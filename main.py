@@ -93,8 +93,9 @@ async def main_loop():
             except requests.exceptions.RequestException as e:
                 log_message(f"Error sending data to server: {e}")
             
-            # Send the data to the RC car        
-            await bt_sender.update_speed(angle, throttle)
+            # Send the data to the RC car     
+            if bt_sender.is_connected():
+                await bt_sender.update_speed(angle, throttle)
 
             # Clear logs.
             global log_messages
@@ -106,7 +107,7 @@ async def main_loop():
             if update_processor:
                 break
 
-            #time.sleep(1) # Uncomment this row if running from prerecorded file.
+            time.sleep(0.01) #  Increase sleep time to 1 if running a pre recorded file.
         if update_processor:
             setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 

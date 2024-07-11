@@ -154,7 +154,7 @@
                     document.getElementById('speedBar').setAttribute('height', speedBarHeight);
                     updateCharts(data.angle, data.throttle);
                     if (showOutputDataLogs) {
-                        logMessage(`Fetched data - Angle: ${data.angle}, Throttle: ${data.throttle}`);
+                        logMessage(`Angle: ${data.angle}, Throttle: ${data.throttle}`);
                     }
                 })
                 .catch(error => {
