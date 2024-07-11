@@ -183,7 +183,6 @@
             .then(response => response.json())
             .then(data => {
                 console.log('Success:', data);
-                logMessage(data.status);
             })
             .catch(error => {
                 console.error('Error:', error);
