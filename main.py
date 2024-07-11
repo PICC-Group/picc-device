@@ -77,15 +77,15 @@ flask_thread.start()
 bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 
 async def main_loop():
+    global received_data
+    global log_messages
     while True:
         signal_processing, vna = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
-        global received_data
 
         while not signal_processing.reference_setup_done:
             # Clear logs.
-            global log_messages
             log_messages.clear()
-            
+
             # Handle any received data and then reset it
             await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
@@ -111,7 +111,6 @@ async def main_loop():
                 await bt_sender.update_speed(angle, throttle)
 
             # Clear logs.
-            global log_messages
             log_messages.clear()
 
             # Handle any received data and then reset it
