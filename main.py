@@ -66,7 +66,7 @@ def setup_nanovna(verbose, calibration_file, data_file, process_sleep_time):
         verbose=verbose,
         interactive_mode=False
     )
-    return signal_processing
+    return signal_processing, data_source
 
 
 # Start Flask in a separate thread
@@ -77,14 +77,23 @@ flask_thread.start()
 bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 
 async def main_loop():
-    signal_processing = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
     while True:
+        signal_processing, vna = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
+
+        while not signal_processing.reference_setup_done:
+            # Handle any received data and then reset it
+            global received_data
+            await handle_received_data(received_data, bt_sender, signal_processing)
+            received_data.clear()  # Reset received_data to an empty dictionary after handling
+
+            time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
+
         await bt_sender.connect()
         data_processor = signal_processing.process_data_continuously()
-        update_processor = False
 
         for angle, throttle in data_processor:
             send_data = {'angle': angle, 'throttle': throttle}
+            global latest_data
             latest_data = send_data.copy()
 
             try:
@@ -93,7 +102,7 @@ async def main_loop():
             except requests.exceptions.RequestException as e:
                 log_message(f"Error sending data to server: {e}")
             
-            # Send the data to the RC car     
+            # Send the data to the RC car
             if bt_sender.is_connected():
                 await bt_sender.update_speed(angle, throttle)
 
@@ -102,14 +111,16 @@ async def main_loop():
             log_messages.clear()
 
             # Handle any received data and then reset it
-            update_processor = await handle_received_data(received_data, bt_sender, signal_processing)
+            global received_data
+            await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
-            if update_processor:
-                break
 
             time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
-        if update_processor:
-            signal_processing = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
+        
+        # Kill vna.
+        vna.kill()
+        signal_processing = None
+
 
 async def handle_received_data(received_data, bt_sender, signal_processing):
     if received_data == {}:
@@ -159,7 +170,6 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         log_message("Running reference setup.")
         signal_processing.setup(False)
         time.sleep(1)
-        return True #  Makes the for loop restart with a new processor.
     elif "refMeasure" in received_data["button"]:
         stepno = int(received_data["button"][-1])
         log_message(f"Running reference measure step {stepno}.")
@@ -169,12 +179,11 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         log_message(f"Changing calibration file. Old file: {CALIBRATION_FILE}")
         CALIBRATION_FILE = received_data["calibrationFile"]
         log_message(f"Calibration file changed. New file: {CALIBRATION_FILE}")
+        log_message("THIS FUNCTION HAS SOME MAJOR PROBLEMS, SYSTEM MAY BE BROKEN.")
         time.sleep(1)
-        return False
-
 
     time.sleep(1)
-    return False
+
 
 # Run the main loop
 asyncio.run(main_loop())
