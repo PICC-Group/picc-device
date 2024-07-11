@@ -1,26 +1,23 @@
 import pynanovna
 import threading
 import requests
-from signal_processing import SignalProcessing
 from flask import Flask, render_template, jsonify, request
+from signal_processing import SignalProcessing
 from bt_car_control import BTSender
 import time
 import asyncio
-from flask_socketio import SocketIO, emit
 import subprocess
 
 DATA_FILE = "../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
 VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
-CAR_DEVICE_NAME = "BT05-BLE"  # Replace with your car's Bluetooth device name
+CAR_DEVICE_NAME = "BT05-BLE"
 
-# Flask application setup
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
-
-latest_data = {"angle": 1, "throttle": 1}  # Initialize with default values
-received_data = {}  # Dictionary to store received data
+latest_data = {"angle": 1, "throttle": 1}
+received_data = {}
+log_messages = []
 
 @app.route("/")
 def index():
@@ -44,8 +41,17 @@ def receive_data():
     received_data = data
     return jsonify({"status": "success", "data": received_data})
 
+@app.route("/logs")
+def logs():
+    return jsonify(log_messages)
+
 def run_flask():
-    socketio.run(app, host="0.0.0.0", port=5000, debug=False, use_reloader=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
+
+def log_message(message):
+    """Store log message for client retrieval."""
+    log_messages.append({'message': message})
+    print(message)
 
 # NanoVNA Setup
 def setup_nanovna(verbose, calibration_file, data_file, process_sleep_time):
@@ -90,6 +96,10 @@ async def main_loop():
             # Send the data to the RC car        
             await bt_sender.update_speed(angle, throttle)
 
+            # Clear logs.
+            global log_messages
+            log_messages.clear()
+
             # Handle any received data and then reset it
             update_processor = await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
@@ -99,11 +109,6 @@ async def main_loop():
             time.sleep(1) # Uncomment this row if running from prerecorded file.
         if update_processor:
             setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
-
-def log_message(message):
-    """Send log message to connected clients."""
-    socketio.emit('log_message', {'message': message})
-    print(message)
 
 async def handle_received_data(received_data, bt_sender, signal_processing):
     if received_data == {}:
@@ -168,7 +173,6 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
 
 
     time.sleep(1)
-    log_message("Done.")
     return False
 
 # Run the main loop
