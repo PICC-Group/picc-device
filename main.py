@@ -96,7 +96,7 @@ async def main_loop():
         data_processor = signal_processing.process_data_continuously()
 
         for angle, throttle in data_processor:
-            send_data = {'angle': angle, 'throttle': throttle}
+            send_data = {'angle': angle / 2, 'throttle': throttle}
             global latest_data
             latest_data = send_data.copy()
 
