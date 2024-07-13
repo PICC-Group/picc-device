@@ -136,7 +136,7 @@
 
             // Draw axis labels
             ctx.fillStyle = 'white';
-            ctx.font = '12px Arial';
+            ctx.font = '14px sans-serif';
             ctx.fillText(maxY, 5, padding);
             ctx.fillText(minY, 5, height - padding);
             ctx.fillText('0', 5, zeroY + 5);
@@ -161,7 +161,7 @@
 
                 // Draw elapsed time labels
                 ctx.fillStyle = 'white';
-                ctx.font = '10px Arial';
+                ctx.font = '12px Arial';
                 for (let i = 0; i < data.length; i++) {
                     if (i % 5 === 0) { // Adjust for every 5 seconds
                         const x = padding + i * stepX;
