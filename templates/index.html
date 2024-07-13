@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: Arial, sans-serif; background: #333; color: white; text-align: center; }
         .container { padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -62,10 +61,10 @@
         </div>
         <div class="charts-container">
             <div class="chart-box">
-                <canvas id="angleChart"></canvas>
+                <canvas id="angleChart" width="600" height="400"></canvas>
             </div>
             <div class="chart-box">
-                <canvas id="throttleChart"></canvas>
+                <canvas id="throttleChart" width="600" height="400"></canvas>
             </div>
         </div>
         <div class="data-box">
@@ -87,58 +86,99 @@
     <script>
         let showOutputDataLogs = false;
 
-        const angleData = { labels: [], datasets: [{ label: 'Angle', data: [], borderColor: 'red', fill: false }] };
-        const throttleData = { labels: [], datasets: [{ label: 'Throttle', data: [], borderColor: 'blue', fill: false }] };
-        const configAngle = {
-            type: 'line',
-            data: angleData,
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        suggestedMin: -180,
-                        suggestedMax: 180
-                    }
-                },
-                responsive: true,
-                maintainAspectRatio: true
+        const angleData = [];
+        const throttleData = [];
+
+        function drawChart(canvas, data, minY, maxY, color) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            const futurePadding = 50; // Extra space for future data points
+
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw axis
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding - futurePadding, height - padding); // Adjusted for future data
+            ctx.stroke();
+
+            // Draw grid lines
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 0.5;
+            for (let i = 1; i <= 5; i++) {
+                const y = padding + i * (height - 2 * padding) / 6;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding - futurePadding, y);
+                ctx.stroke();
+
+                const x = padding + i * (width - 2 * padding - futurePadding) / 6;
+                ctx.beginPath();
+                ctx.moveTo(x, padding);
+                ctx.lineTo(x, height - padding);
+                ctx.stroke();
             }
-        };
-        const configThrottle = {
-            type: 'line',
-            data: throttleData,
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        suggestedMin: 0,
-                        suggestedMax: 1
+
+            // Draw axis labels
+            ctx.fillStyle = 'white';
+            ctx.font = '12px Arial';
+            ctx.fillText(maxY, 5, padding);
+            ctx.fillText(minY, 5, height - padding);
+            ctx.fillText('Time (s)', width / 2, height - 5);
+
+            if (data.length > 0) {
+                // Draw line chart
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const stepX = (width - 2 * padding - futurePadding) / (data.length - 1);
+                for (let i = 0; i < data.length; i++) {
+                    const x = padding + i * stepX;
+                    const y = height - padding - ((data[i].value - minY) / (maxY - minY)) * (height - 2 * padding);
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
                     }
-                },
-                responsive: true,
-                maintainAspectRatio: true
+                }
+                ctx.stroke();
+
+                // Draw elapsed time labels
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                for (let i = 0; i < data.length; i++) {
+                    if (i % 5 === 0) { // Adjust for every 5 seconds
+                        const x = padding + i * stepX;
+                        const roundedTime = Math.round(data[i].time)
+                        ctx.fillText(roundedTime + 's', x, height - padding + 15);
+                    }
+                }
             }
-        };
-        const angleChart = new Chart(document.getElementById('angleChart').getContext('2d'), configAngle);
-        const throttleChart = new Chart(document.getElementById('throttleChart').getContext('2d'), configThrottle);
+        }
+
+        let startTime = new Date();
 
         function updateCharts(angle, throttle) {
-            if (angleData.labels.length > 10) {
-                angleData.labels.shift();
-                angleData.datasets[0].data.shift();
-            }
-            if (throttleData.labels.length > 10) {
-                throttleData.labels.shift();
-                throttleData.datasets[0].data.shift();
-            }
-            let label = new Date().toLocaleTimeString();
-            angleData.labels.push(label);
-            angleData.datasets[0].data.push(angle);
-            throttleData.labels.push(label);
-            throttleData.datasets[0].data.push(throttle);
-            angleChart.update();
-            throttleChart.update();
+            if (angleData.length > 10) angleData.shift();
+            if (throttleData.length > 10) throttleData.shift();
+
+            const currentTime = new Date();
+            const elapsedTime = (currentTime - startTime) / 1000; // Elapsed time in seconds
+
+            angleData.push({ time: elapsedTime, value: angle });
+            throttleData.push({ time: elapsedTime, value: throttle });
+
+            drawChart(document.getElementById('angleChart'), angleData, -180, 180, 'red');
+            drawChart(document.getElementById('throttleChart'), throttleData, 0, 1, 'blue');
         }
+
+
 
         function fetchData() {
             fetch('/data')
