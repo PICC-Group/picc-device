@@ -197,7 +197,7 @@
                 .then(data => {
                     const roundedSpeedPercent = (data.throttle * 100).toFixed(2);  // Round to two decimal places
                     document.getElementById('throttle').innerText = roundedSpeedPercent + '%';
-                    document.getElementById('angle').innerText = data.angle + ' deg';
+                    document.getElementById('angle').innerText = data.angle.toFixed(2) + ' deg';
                     document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
                     const speedPercent = data.throttle;
                     const speedBarHeight = speedPercent * 80;  // 80 is the total height of the outline rect
