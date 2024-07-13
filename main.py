@@ -8,7 +8,7 @@ import time
 import asyncio
 import subprocess
 
-DATA_FILE = "../save_plate.csv"
+DATA_FILE = False#"../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
 VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
@@ -168,6 +168,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
     elif received_data["button"] == "refMeasure0":
         log_message("Running reference measure CLEAR.")
         signal_processing.reference_step0()
+        log_message("Action performed.")
     elif received_data["button"] == "refMeasureSetup":
         log_message("Running reference setup.")
         signal_processing.setup(False)
@@ -176,6 +177,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         stepno = int(received_data["button"][-1])
         log_message(f"Running reference measure step {stepno}.")
         signal_processing.reference_step_n(stepno)
+        log_message("Action performed.")
     elif received_data["button"] == "updateCalibrationFile":
         global CALIBRATION_FILE
         log_message(f"Changing calibration file. Old file: {CALIBRATION_FILE}")
