@@ -95,8 +95,8 @@ async def main_loop():
         await bt_sender.connect()
         data_processor = signal_processing.process_data_continuously()
 
-        for angle, throttle in data_processor:
-            send_data = {'angle': angle / 2, 'throttle': throttle}
+        for angle, throttle, s11, s21 in data_processor:
+            send_data = {'angle': angle / 2, 'throttle': throttle, 's11': s11, 's21': s21}
             global latest_data
             latest_data = send_data.copy()
 
