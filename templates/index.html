@@ -62,6 +62,16 @@
                 <canvas id="throttleChart" width="600" height="400"></canvas>
             </div>
         </div>
+        <div class="charts-container">
+            <div class="chart-box">
+                <h3>S11 Magnitude Chart</h3>
+                <canvas id="s11Chart" width="600" height="400"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>S21 Magnitude Chart</h3>
+                <canvas id="s21Chart" width="600" height="400"></canvas>
+            </div>
+        </div>        
         <div class="data-boxes">
             <div class="data-box">
                 <h3>Control panel</h3>
@@ -217,20 +227,81 @@
         }
 
 
+        const s11Data = [];
+        const s21Data = [];
+
+        function calculateMagnitude(real, imaginary) {
+            return Math.sqrt(real ** 2 + imaginary ** 2);
+        }
+
+        function drawMagnitudeChart(canvas, data, color) {
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+
+            ctx.clearRect(0, 0, width, height);
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, height - padding);
+            ctx.lineTo(width - padding, height - padding);
+            ctx.stroke();
+
+            ctx.fillStyle = 'white';
+            ctx.font = '13px Arial';
+            ctx.fillText('Frequency', width / 2, height - 10);
+            ctx.fillText('Magnitude', 10, padding / 2);
+
+            if (data.length > 0) {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const maxMagnitude = Math.max(...data.map(d => d.magnitude));
+                data.forEach((d, i) => {
+                    const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
+                    const y = height - padding - (d.magnitude / maxMagnitude) * (height - 2 * padding);
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+            }
+        }
+
+        function updateMagnitudeCharts(s11, s21) {
+            s11Data.length = 0;
+            s21Data.length = 0;
+
+            s11.forEach(([frequency, real, imaginary]) => {
+                s11Data.push({ frequency, magnitude: calculateMagnitude(real, imaginary) });
+            });
+            s21.forEach(([frequency, real, imaginary]) => {
+                s21Data.push({ frequency, magnitude: calculateMagnitude(real, imaginary) });
+            });
+
+            drawMagnitudeChart(document.getElementById('s11Chart'), s11Data, 'green');
+            drawMagnitudeChart(document.getElementById('s21Chart'), s21Data, 'purple');
+        }
 
         function fetchData() {
             fetch('/data')
                 .then(response => response.json())
                 .then(data => {
-                    const roundedSpeedPercent = (data.throttle * 100).toFixed(2);  // Round to two decimal places
+                    const roundedSpeedPercent = (data.throttle * 100).toFixed(2);
                     document.getElementById('throttle').innerText = roundedSpeedPercent + '%';
                     document.getElementById('angle').innerText = data.angle.toFixed(2) + ' deg';
                     document.getElementById('wheel').style.transform = `rotate(${data.angle}deg)`;
                     const speedPercent = data.throttle;
-                    const speedBarHeight = speedPercent * 80;  // 80 is the total height of the outline rect
-                    document.getElementById('speedBar').setAttribute('y', 90 - speedBarHeight); // 90 is the base y-coordinate
+                    const speedBarHeight = speedPercent * 80;
+                    document.getElementById('speedBar').setAttribute('y', 90 - speedBarHeight);
                     document.getElementById('speedBar').setAttribute('height', speedBarHeight);
                     updateCharts(data.angle, data.throttle);
+                    updateMagnitudeCharts(data.s11, data.s21);
                     if (showOutputDataLogs) {
                         logMessage(`Angle: ${data.angle}, Throttle: ${data.throttle}`);
                     }
