@@ -234,14 +234,16 @@
             return 20 * Math.log10(Math.sqrt(real ** 2 + imaginary ** 2));
         }
 
-        function drawMagnitudeChart(canvas, data, color, minY = 0, maxY = null) {
+        function drawMagnitudeChart(canvas, data, color, minY = 0, maxY = null, showZeroLine = false) {
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
             const padding = 40;
+            const arrowSize = 5; // Size of the arrowheads
 
             ctx.clearRect(0, 0, width, height);
 
+            // Draw axis lines
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -250,14 +252,46 @@
             ctx.lineTo(width - padding, height - padding);
             ctx.stroke();
 
+            // Draw arrowheads
+            ctx.fillStyle = 'white';
+            // Y-axis arrowhead
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding - arrowSize, padding + arrowSize);
+            ctx.lineTo(padding + arrowSize, padding + arrowSize);
+            ctx.closePath();
+            ctx.fill();
+
+            // X-axis arrowhead
+            ctx.beginPath();
+            ctx.moveTo(width - padding, height - padding);
+            ctx.lineTo(width - padding - arrowSize, height - padding - arrowSize);
+            ctx.lineTo(width - padding - arrowSize, height - padding + arrowSize);
+            ctx.closePath();
+            ctx.fill();
+
+            // Calculate maxY if not provided
+            const calculatedMaxY = maxY !== null ? maxY : Math.max(...data.map(d => d.magnitude));
+
+            // Draw zero line if needed
+            if (showZeroLine && minY < 0 && 0 < calculatedMaxY) {
+                const zeroY = height - padding - ((0 - minY) / (calculatedMaxY - minY)) * (height - 2 * padding);
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(padding, zeroY);
+                ctx.lineTo(width - padding, zeroY);
+                ctx.stroke();
+                ctx.fillText('0', 5, zeroY + 5);
+            }
+
+            // Draw axis labels
             ctx.fillStyle = 'white';
             ctx.font = '13px Arial';
-            ctx.fillText('Frequency', width / 2, height - 10);
-            ctx.fillText('Magnitude', 10, padding / 2);
+            ctx.fillText('Frequency (GHz)', width / 2, height - 10);
+            ctx.fillText('Magnitude (dB)', 10, padding / 2);
 
             if (data.length > 0) {
-                const calculatedMaxY = maxY !== null ? maxY : Math.max(...data.map(d => d.magnitude));
-
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -275,8 +309,15 @@
                 // Draw min and max Y labels
                 ctx.fillText(minY, 10, height - padding + 5);
                 ctx.fillText(calculatedMaxY, 10, padding + 5);
+                 // Draw first and last frequency labels
+            const firstFrequency = data[0].frequency/1e9;
+            const lastFrequency = data[data.length - 1].frequency/1e9;
+            ctx.fillText(firstFrequency, padding, height - padding + 20);
+            ctx.fillText(lastFrequency, width - padding - 20, height - padding + 20);
             }
         }
+
+
 
         function updateMagnitudeCharts(s11, s21) {
             s11Data.length = 0;
@@ -289,8 +330,8 @@
                 s21Data.push({ frequency, magnitude: calculateMagnitudeDB(real, imaginary) });
             });
 
-            drawMagnitudeChart(document.getElementById('s11Chart'), s11Data, '#ffa73e', minY=-50, maxY=10);
-            drawMagnitudeChart(document.getElementById('s21Chart'), s21Data, '#ffa73e', minY=-100, maxY=10);
+            drawMagnitudeChart(document.getElementById('s11Chart'), s11Data, '#ffa73e', minY=-50, maxY=10, true);
+            drawMagnitudeChart(document.getElementById('s21Chart'), s21Data, '#ffa73e', minY=-100, maxY=10, true);
         }
 
         function fetchData() {

@@ -8,7 +8,7 @@ import time
 import asyncio
 import subprocess
 
-DATA_FILE = "../save_plate.csv"
+DATA_FILE = False#"../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
 VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
