@@ -8,10 +8,10 @@ class BTSender:
         device_name,
         SERVICE_UUID="FFE0",
         CHARACTERISTIC_UUID="FFE1",
-        max_motor_speed=100, #  Max speed is  255.
-        min_motor_speed=25,
-        angle_min_threshold=-10,
-        angle_max_threshold=10,
+        max_motor_speed=255,
+        min_motor_speed=20,
+        angle_min_threshold=-35,
+        angle_max_threshold=35,
         max_steering_angle=45
     ):
         self.device_name = device_name
