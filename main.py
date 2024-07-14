@@ -134,12 +134,12 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
             max_threshold = int(received_data["angleThresholdMax"])
             max_angle = int(received_data["angleMax"])
             if min_threshold != 0:
-                bt_sender.angle_min_threshold = min_threshold
+                bt_sender.angle_min_threshold = min_threshold*2
             if max_threshold != 0:
-                bt_sender.angle_max_threshold = max_threshold
+                bt_sender.angle_max_threshold = max_threshold*2
             if max_angle != 0:
                 bt_sender.max_steering_angle = max_angle
-            log_message("Updating car angle thresholds.")
+            log_message("Car angle thresholds have been updated.")
         except ValueError:
             log_message("Could not update the car angle thresholds, are they valid?")
     elif received_data["button"] == "updateSpeedButton":
@@ -150,7 +150,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
                 bt_sender.min_motor_speed= min_speed
             if max_threshold != 0:
                 bt_sender.max_motor_speed = max_speed
-            log_message("Updating car speed thresholds.")
+            log_message("Car speed thresholds have been updated.")
         except ValueError:
             log_message("Could not update the car speed thresholds, are they valid?")
     elif received_data["button"] == "rebootButton":
