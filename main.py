@@ -9,7 +9,7 @@ import asyncio
 import subprocess
 
 DATA_FILE = False#"../save_plate.csv"
-CALIBRATION_FILE = "../cal0514.cal"
+CALIBRATION_FILE = "../cal0714.cal"
 VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
 CAR_DEVICE_NAME = "BT05-BLE"
@@ -117,7 +117,7 @@ async def main_loop():
             await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
 
-            time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
+            await asyncio.sleep(0.1) #  Increase sleep time to 1 if running a pre recorded file.
         
         # Kill vna.
         vna.kill()
@@ -187,8 +187,6 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         log_message(f"Calibration file changed. New file: {CALIBRATION_FILE}")
         log_message("THIS FUNCTION HAS SOME MAJOR PROBLEMS, SYSTEM MAY BE BROKEN.")
         time.sleep(1)
-
-    time.sleep(1)
 
 
 # Run the main loop
