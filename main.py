@@ -90,7 +90,7 @@ async def main_loop():
             await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
 
-            await asyncio.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
+            time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
 
         await bt_sender.connect()
         data_processor = signal_processing.process_data_continuously()
@@ -117,7 +117,7 @@ async def main_loop():
             await handle_received_data(received_data, bt_sender, signal_processing)
             received_data.clear()  # Reset received_data to an empty dictionary after handling
 
-            await asyncio.sleep(0.5) #  Increase sleep time to 1 if running a pre recorded file.
+            await asyncio.sleep(0.1) #  Increase sleep time to 1 if running a pre recorded file.
         
         # Kill vna.
         vna.kill()
@@ -134,9 +134,9 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
             max_threshold = int(received_data["angleThresholdMax"])
             max_angle = int(received_data["angleMax"])
             if min_threshold != 0:
-                bt_sender.angle_min_threshold = min_threshold * 2
+                bt_sender.angle_min_threshold = min_threshold*2
             if max_threshold != 0:
-                bt_sender.angle_max_threshold = max_threshold * 2
+                bt_sender.angle_max_threshold = max_threshold*2
             if max_angle != 0:
                 bt_sender.max_steering_angle = max_angle
             log_message("Car angle thresholds have been updated.")
@@ -174,7 +174,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
     elif received_data["button"] == "refMeasureSetup":
         log_message("Running reference setup.")
         signal_processing.setup(False)
-        await asyncio.sleep(1)
+        time.sleep(1)
     elif "refMeasure" in received_data["button"]:
         stepno = int(received_data["button"][-1])
         log_message(f"Running reference measure step {stepno}.")
@@ -186,8 +186,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         CALIBRATION_FILE = received_data["calibrationFile"]
         log_message(f"Calibration file changed. New file: {CALIBRATION_FILE}")
         log_message("THIS FUNCTION HAS SOME MAJOR PROBLEMS, SYSTEM MAY BE BROKEN.")
-        await asyncio.sleep(1)
-    await asyncio.sleep(1)
+        time.sleep(1)
 
 
 # Run the main loop
