@@ -45,14 +45,14 @@ class SignalProcessing:
             if not self.reference_setup_done:
                 if self.verbose:
                     print("No reference values has been taken.")
-                yield (0, 0)
+                yield (0, 0, 0, 0)
                 continue
             angle = self.get_angle(s11, s21, self.ref_angle_data, self.ref_throttle_data, self.alpha) * 90 - 45
             throttle = self.get_throttle(s11, s21, self.ref_throttle_data, self.alpha)
             if self.verbose:
                 print(f"Processed phase: {angle}, direction: {throttle}")
             sleep(self.process_sleep_time)
-            yield angle, throttle
+            yield angle, throttle, s11, s21
 
     def get_angle(
         self, s11, s21, ref_angle_data=None, ref_throttle_data=None, alpha=3.0
