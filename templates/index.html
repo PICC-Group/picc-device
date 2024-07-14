@@ -230,11 +230,11 @@
         const s11Data = [];
         const s21Data = [];
 
-        function calculateMagnitude(real, imaginary) {
-            return Math.sqrt(real ** 2 + imaginary ** 2);
+        function calculateMagnitudeDB(real, imaginary) {
+            return 20 * Math.log10(Math.sqrt(real ** 2 + imaginary ** 2));
         }
 
-        function drawMagnitudeChart(canvas, data, color) {
+        function drawMagnitudeChart(canvas, data, color, minY = 0, maxY = null) {
             const ctx = canvas.getContext('2d');
             const width = canvas.width;
             const height = canvas.height;
@@ -256,13 +256,14 @@
             ctx.fillText('Magnitude', 10, padding / 2);
 
             if (data.length > 0) {
+                const calculatedMaxY = maxY !== null ? maxY : Math.max(...data.map(d => d.magnitude));
+
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                const maxMagnitude = Math.max(...data.map(d => d.magnitude));
                 data.forEach((d, i) => {
                     const x = padding + (i / (data.length - 1)) * (width - 2 * padding);
-                    const y = height - padding - (d.magnitude / maxMagnitude) * (height - 2 * padding);
+                    const y = height - padding - ((d.magnitude - minY) / (calculatedMaxY - minY)) * (height - 2 * padding);
                     if (i === 0) {
                         ctx.moveTo(x, y);
                     } else {
@@ -270,6 +271,10 @@
                     }
                 });
                 ctx.stroke();
+
+                // Draw min and max Y labels
+                ctx.fillText(minY, 10, height - padding + 5);
+                ctx.fillText(calculatedMaxY, 10, padding + 5);
             }
         }
 
@@ -278,14 +283,14 @@
             s21Data.length = 0;
 
             s11.forEach(([frequency, real, imaginary]) => {
-                s11Data.push({ frequency, magnitude: calculateMagnitude(real, imaginary) });
+                s11Data.push({ frequency, magnitude: calculateMagnitudeDB(real, imaginary) });
             });
             s21.forEach(([frequency, real, imaginary]) => {
-                s21Data.push({ frequency, magnitude: calculateMagnitude(real, imaginary) });
+                s21Data.push({ frequency, magnitude: calculateMagnitudeDB(real, imaginary) });
             });
 
-            drawMagnitudeChart(document.getElementById('s11Chart'), s11Data, 'green');
-            drawMagnitudeChart(document.getElementById('s21Chart'), s21Data, 'purple');
+            drawMagnitudeChart(document.getElementById('s11Chart'), s11Data, '#ffa73e', minY=-50, maxY=10);
+            drawMagnitudeChart(document.getElementById('s21Chart'), s21Data, '#ffa73e', minY=-100, maxY=10);
         }
 
         function fetchData() {

@@ -15,7 +15,7 @@ PROCESS_SLEEP_TIME = 0.0001
 CAR_DEVICE_NAME = "BT05-BLE"
 
 app = Flask(__name__)
-latest_data = {"angle": 1, "throttle": 1}
+latest_data = {"angle": 1, "throttle": 1, 's11': [[0, 0, 0]], 's21':[[0, 0, 0]]}
 received_data = {}
 log_messages = []
 
