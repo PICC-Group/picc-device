@@ -146,9 +146,11 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         try:
             min_speed = int(received_data["speedMin"])
             max_speed = int(received_data["speedMax"])
-            if min_threshold != 0:
+            if min_speed > 255 or max_speed > 255:
+                raise ValueError('255 is max speed.')
+            if min_speed != 0:
                 bt_sender.min_motor_speed= min_speed
-            if max_threshold != 0:
+            if max_speed != 0:
                 bt_sender.max_motor_speed = max_speed
             log_message("Car speed thresholds have been updated.")
         except ValueError:
