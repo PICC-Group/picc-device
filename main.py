@@ -8,7 +8,7 @@ import time
 import asyncio
 import subprocess
 
-DATA_FILE = False#"../save_plate.csv"
+DATA_FILE = "../save_plate.csv"
 CALIBRATION_FILE = "../cal0514.cal"
 VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
@@ -16,34 +16,38 @@ CAR_DEVICE_NAME = "BT05-BLE"
 
 app = Flask(__name__)
 latest_data = {"angle": 1, "throttle": 1, 's11': [[0, 0, 0]], 's21':[[0, 0, 0]]}
-received_data = {}
 log_messages = []
+signal_processing = None
 
 @app.route("/")
-def index():
+async def index():
     return render_template("index.html")
 
 @app.route("/data")
-def data():
+async def data():
     return jsonify(latest_data)
 
 @app.route("/update_data", methods=["POST"])
-def update_data():
+async def update_data():
     global latest_data
     data = request.get_json()
     latest_data = data
     return jsonify({"status": "success"})
 
 @app.route("/receive_data", methods=["POST"])
-def receive_data():
-    global received_data
+async def receive_data():
+    global signal_processing, bt_sender
     data = request.get_json()
-    received_data = data
-    return jsonify({"status": "success", "data": received_data})
+    if signal_processing is not None and data is not None:
+        await handle_received_data(data, bt_sender, signal_processing)
+        return jsonify({"status": "success", "data": data})
+    return jsonify({"status": "failure", "data": data})
 
 @app.route("/logs")
-def logs():
-    return jsonify(log_messages)
+async def logs():
+    res = jsonify(log_messages)
+    log_messages.clear()
+    return res
 
 def run_flask():
     app.run(host="0.0.0.0", port=5000, debug=False)
@@ -60,13 +64,13 @@ def setup_nanovna(verbose, calibration_file, data_file, process_sleep_time):
     data_source.set_sweep(2.9e9, 3.1e9, 1, 101)
     data_stream = data_source.stream_data(data_file)
 
-    signal_processing = SignalProcessing(
+    sig_processing = SignalProcessing(
         data_stream,
         process_sleep_time=process_sleep_time,
         verbose=verbose,
         interactive_mode=False
     )
-    return signal_processing, data_source
+    return sig_processing, data_source
 
 
 # Start Flask in a separate thread
@@ -77,20 +81,12 @@ flask_thread.start()
 bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 
 async def main_loop():
-    global received_data
-    global log_messages
+    global signal_processing
     while True:
         signal_processing, vna = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 
         while not signal_processing.reference_setup_done:
-            # Clear logs.
-            log_messages.clear()
-
-            # Handle any received data and then reset it
-            await handle_received_data(received_data, bt_sender, signal_processing)
-            received_data.clear()  # Reset received_data to an empty dictionary after handling
-
-            time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
+            await asyncio.sleep(0.1) #  Increase sleep time to 1 if running a pre recorded file.
 
         await bt_sender.connect()
         data_processor = signal_processing.process_data_continuously()
@@ -109,15 +105,8 @@ async def main_loop():
             # Send the data to the RC car
             if bt_sender.is_connected():
                 await bt_sender.update_speed(angle, throttle)
-
-            # Clear logs.
-            log_messages.clear()
-
-            # Handle any received data and then reset it
-            await handle_received_data(received_data, bt_sender, signal_processing)
-            received_data.clear()  # Reset received_data to an empty dictionary after handling
-
-            time.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
+            
+            #await asyncio.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
         
         # Kill vna.
         vna.kill()
@@ -174,7 +163,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
     elif received_data["button"] == "refMeasureSetup":
         log_message("Running reference setup.")
         signal_processing.setup(False)
-        time.sleep(1)
+        await asyncio.sleep(1)
     elif "refMeasure" in received_data["button"]:
         stepno = int(received_data["button"][-1])
         log_message(f"Running reference measure step {stepno}.")
@@ -186,9 +175,7 @@ async def handle_received_data(received_data, bt_sender, signal_processing):
         CALIBRATION_FILE = received_data["calibrationFile"]
         log_message(f"Calibration file changed. New file: {CALIBRATION_FILE}")
         log_message("THIS FUNCTION HAS SOME MAJOR PROBLEMS, SYSTEM MAY BE BROKEN.")
-        time.sleep(1)
-
-    time.sleep(1)
+        await asyncio.sleep(1)
 
 
 # Run the main loop

@@ -1,5 +1,5 @@
 bleak==0.22.2
-Flask==3.0.3
+Flask[async]==3.0.3
 Flask_SocketIO==5.3.6
 numpy==2.0.0
 pynanovna==0.0.7
