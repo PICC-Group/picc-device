@@ -19,6 +19,9 @@ latest_data = {"angle": 1, "throttle": 1, 's11': [[0, 0, 0]], 's21':[[0, 0, 0]]}
 log_messages = []
 signal_processing = None
 
+# Instantiate the BTSender class
+bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
+
 @app.route("/")
 async def index():
     return render_template("index.html")
@@ -36,7 +39,8 @@ async def update_data():
 
 @app.route("/receive_data", methods=["POST"])
 async def receive_data():
-    global signal_processing, bt_sender
+    global signal_processing
+    global bt_sender
     data = request.get_json()
     if signal_processing is not None and data is not None:
         await handle_received_data(data, bt_sender, signal_processing)
@@ -76,9 +80,6 @@ def setup_nanovna(verbose, calibration_file, data_file, process_sleep_time):
 # Start Flask in a separate thread
 flask_thread = threading.Thread(target=run_flask)
 flask_thread.start()
-
-# Instantiate the BTSender class
-bt_sender = BTSender(device_name=CAR_DEVICE_NAME)
 
 async def main_loop():
     global signal_processing
