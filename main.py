@@ -8,8 +8,8 @@ import time
 import asyncio
 import subprocess
 
-DATA_FILE = "../save_plate.csv"
-CALIBRATION_FILE = "../cal0514.cal"
+DATA_FILE = False #"../save_plate.csv"
+CALIBRATION_FILE = "../cal0714.cal"
 VERBOSE = True
 PROCESS_SLEEP_TIME = 0.0001
 CAR_DEVICE_NAME = "BT05-BLE"
