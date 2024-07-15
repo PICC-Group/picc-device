@@ -399,7 +399,7 @@
         }
 
         // Polling for data and logs
-        setInterval(fetchData, 20);
+        setInterval(fetchData, 250);
         setInterval(() => {
             fetch('/logs')
                 .then(response => response.json())

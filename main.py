@@ -40,10 +40,9 @@ async def update_data():
 @app.route("/receive_data", methods=["POST"])
 async def receive_data():
     global signal_processing
-    global bt_sender
     data = request.get_json()
     if signal_processing is not None and data is not None:
-        await handle_received_data(data, bt_sender, signal_processing)
+        await handle_received_data(data)
         return jsonify({"status": "success", "data": data})
     return jsonify({"status": "failure", "data": data})
 
@@ -83,6 +82,7 @@ flask_thread.start()
 
 async def main_loop():
     global signal_processing
+    global bt_sender
     while True:
         signal_processing, vna = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 
@@ -114,7 +114,10 @@ async def main_loop():
         signal_processing = None
 
 
-async def handle_received_data(received_data, bt_sender, signal_processing):
+async def handle_received_data(received_data):
+    global bt_sender
+    global signal_processing
+
     if received_data == {}:
         return False
 
