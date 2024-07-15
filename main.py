@@ -83,6 +83,9 @@ flask_thread.start()
 async def main_loop():
     global signal_processing
     global bt_sender
+    loop = asyncio.get_running_loop()
+    bt_sender = BTSender(device_name=CAR_DEVICE_NAME, loop=loop)
+    
     while True:
         signal_processing, vna = setup_nanovna(VERBOSE, CALIBRATION_FILE, DATA_FILE, PROCESS_SLEEP_TIME)
 
@@ -181,11 +184,5 @@ async def handle_received_data(received_data):
         log_message("THIS FUNCTION HAS SOME MAJOR PROBLEMS, SYSTEM MAY BE BROKEN.")
         await asyncio.sleep(1)
 
-if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(main_loop())
-    finally:
-        loop.close()
 # Run the main loop
 asyncio.run(main_loop())

@@ -6,6 +6,7 @@ class BTSender:
     def __init__(
         self,
         device_name,
+        loop=None,  # Accept loop as an optional argument
         SERVICE_UUID="FFE0",
         CHARACTERISTIC_UUID="FFE1",
         max_motor_speed=150,
@@ -15,6 +16,7 @@ class BTSender:
         max_steering_angle=45
     ):
         self.device_name = device_name
+        self.loop = loop or asyncio.get_event_loop()  # Use the provided loop or the current event loop
         self.max_motor_speed = max_motor_speed
         self.min_motor_speed = min_motor_speed
         self.angle_min_threshold = angle_min_threshold
@@ -25,10 +27,10 @@ class BTSender:
         self.client = None
 
     async def connect(self):
-        devices = await BleakScanner.discover()
+        devices = await BleakScanner.discover(loop=self.loop)  # Ensure the loop is used here
         for device in devices:
             if device.name == self.device_name:
-                self.client = BleakClient(device.address)
+                self.client = BleakClient(device.address, loop=self.loop)  # Pass the loop to BleakClient
                 return await self.client.connect()
         print("Did not find bluetooth name: ", self.device_name)
         return False
