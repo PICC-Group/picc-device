@@ -92,7 +92,9 @@ async def main_loop():
         while not signal_processing.reference_setup_done:
             await asyncio.sleep(0.1) #  Increase sleep time to 1 if running a pre recorded file.
 
+        log_message("Trying to connect to car.")
         await bt_sender.connect()
+        log_message("Done.")
         data_processor = signal_processing.process_data_continuously()
 
         for angle, throttle, s11, s21 in data_processor:
