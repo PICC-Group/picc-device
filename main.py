@@ -106,7 +106,7 @@ async def main_loop():
             if bt_sender.is_connected():
                 await bt_sender.update_speed(angle, throttle)
             
-            #await asyncio.sleep(1) #  Increase sleep time to 1 if running a pre recorded file.
+            await asyncio.sleep(0.1) #  Increase sleep time to 1 if running a pre recorded file.
         
         # Kill vna.
         vna.kill()
