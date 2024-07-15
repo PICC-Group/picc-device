@@ -40,7 +40,7 @@ class BTSender:
         return self.client and self.client.is_connected
 
     def angle_throttle_to_motor_speeds(self, angle, throttle):
-        if throttle <= 0.05:
+        if throttle <= 0.1:
             return 0,0
         
         angle_rad = math.radians(angle)
